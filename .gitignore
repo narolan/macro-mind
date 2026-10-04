@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Mise ###
+mise.local.toml

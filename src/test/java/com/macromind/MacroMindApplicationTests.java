@@ -1,4 +1,4 @@
-package com.macromind.MacroMind;
+package com.macromind;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
