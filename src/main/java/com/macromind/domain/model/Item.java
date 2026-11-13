@@ -10,6 +10,10 @@ public record Item(
         Set<ItemTag> tags
         ) {
 
+    public Item {
+        tags = Set.copyOf(tags);
+    }
+
     public boolean hasTag(ItemTag tag) {
         return tags.contains(tag);
     }

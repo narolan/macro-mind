@@ -11,6 +11,11 @@ public record GameState(
         GameMode gameMode
 ) {
 
+    public GameState {
+        allies = List.copyOf(allies);
+        enemies = List.copyOf(enemies);
+    }
+
     public int highestEnemyArmor() {
         return enemies.stream().mapToInt(player -> player.stats().armor()).max().orElse(0);
     }

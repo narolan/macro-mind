@@ -20,6 +20,10 @@ public record Player(
     private static final int HEAVY_REGEN_PER_SECOND = 100;
     private static final int HEAVY_SUSTAIN_PERCENT = 15;
 
+    public Player {
+        items = List.copyOf(items);
+    }
+
     public Player withGold(int gold) {
         return new Player(name, championName, championClass, level, isEnemy, items, stats, role, kda, gold, isEstimated, isDead);
     }
