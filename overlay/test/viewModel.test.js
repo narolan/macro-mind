@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { toViewModel, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED } = require('../src/viewModel');
+const { toViewModel, viewKey, reconcile, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED } = require('../src/viewModel');
 
 const advice = (item, priority, extra = {}) => ({
   item, reasoning: `why ${item}`, priority, category: 'DEFENSIVE', confidence: 'EXACT', target: null, ...extra,
@@ -123,4 +123,31 @@ test('refuses a non-integer item id', () => {
     const vm = toViewModel({ visible: true, iconVersion: '16.22.1', advice: [advice('A', 'CRITICAL', { itemId: bad })] });
     assert.equal(vm.rows[0].icon, null, String(bad));
   }
+});
+
+test('viewKey is identical for identical payloads so the renderer can skip redundant redraws', () => {
+  const payload = () => ({ visible: true, iconVersion: '16.22.1', advice: [advice('A', 'CRITICAL', { itemId: 1 }), advice('B', 'RECOMMENDED', { reasoning: 'other' })] });
+  assert.equal(viewKey(toViewModel(payload())), viewKey(toViewModel(payload())));
+});
+
+test('viewKey changes when a row, its reason, its priority or its alternatives change', () => {
+  const base = viewKey(toViewModel({ visible: true, advice: [advice('A', 'CRITICAL')] }));
+  assert.notEqual(base, viewKey(toViewModel({ visible: true, advice: [advice('B', 'CRITICAL')] })));
+  assert.notEqual(base, viewKey(toViewModel({ visible: true, advice: [advice('A', 'RECOMMENDED')] })));
+  assert.notEqual(base, viewKey(toViewModel({ visible: true, advice: [advice('A', 'CRITICAL', { reasoning: 'x' })] })));
+  assert.notEqual(base, viewKey(toViewModel({ visible: true, advice: [advice('A', 'CRITICAL'), advice('B', 'CRITICAL')] })));
+});
+
+test('viewKey of a hidden view is the same however it became hidden', () => {
+  assert.equal(viewKey(toViewModel(null)), viewKey(toViewModel({ visible: false, advice: [] })));
+});
+
+test('reconcile keeps surviving cards in place, drops stale ones and only creates new ones', () => {
+  const created = [];
+  const make = (key) => { created.push(key); return { key }; };
+  const first = reconcile(new Map(), ['a', 'b'], make);
+  const second = reconcile(first, ['b', 'c'], make);
+  assert.deepEqual(created, ['a', 'b', 'c']);
+  assert.equal(second.get('b'), first.get('b'));
+  assert.deepEqual([...second.keys()], ['b', 'c']);
 });

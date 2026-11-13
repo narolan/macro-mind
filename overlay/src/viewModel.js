@@ -54,4 +54,21 @@ function toViewModel(payload) {
   return rows.length === 0 ? DISCONNECTED : { visible: true, rows };
 }
 
-module.exports = { toViewModel, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED };
+/** A stable string for one row; two rows with the same key look the same, so the renderer can keep the old card. */
+function rowKey(row) {
+  return JSON.stringify([row.item, row.level, row.reasoning, row.estimated, row.target, row.alternatives, row.icon]);
+}
+
+/** A stable string for a whole view; equal keys mean nothing visible changed. */
+function viewKey(vm) {
+  return vm.visible ? vm.rows.map(rowKey).join('\n') : '';
+}
+
+/** Next map of key -> card: surviving keys keep their existing card, only new keys call make(). Pure and order-preserving. */
+function reconcile(previous, keys, make) {
+  const next = new Map();
+  for (const key of keys) next.set(key, previous.get(key) || make(key));
+  return next;
+}
+
+module.exports = { toViewModel, viewKey, rowKey, reconcile, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED };

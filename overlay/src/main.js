@@ -3,7 +3,7 @@
 const { app, BrowserWindow, screen } = require('electron');
 const path = require('node:path');
 const { fetchAdvice } = require('./poller');
-const { toViewModel } = require('./viewModel');
+const { toViewModel, viewKey } = require('./viewModel');
 
 const ADVICE_URL = process.env.MACROMIND_URL || 'http://127.0.0.1:8765/advice';
 const POLL_INTERVAL_MS = 1000;
@@ -33,11 +33,17 @@ function createWindow() {
   return window;
 }
 
+let lastKey = null;
+
 async function tick(window) {
   if (window.isDestroyed()) return;
   const vm = toViewModel(await fetchAdvice(ADVICE_URL));
   if (window.isDestroyed()) return;
-  window.webContents.send('view-model', vm);
+  const key = viewKey(vm);
+  if (key !== lastKey) { // an unchanged view is never re-sent, so nothing in the window is touched
+    lastKey = key;
+    window.webContents.send('view-model', vm);
+  }
   if (vm.visible && !window.isVisible()) window.showInactive();
   if (!vm.visible && window.isVisible()) window.hide();
 }

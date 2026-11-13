@@ -9,8 +9,8 @@ function element(tag, className, text) {
   return node;
 }
 
-// Cards already on screen are kept (not re-created), so the 1s refresh never replays the fade-in.
-const shown = new Map();
+// Cards already on screen are kept, so a card that did not change is never touched (and never re-animates).
+let shown = new Map();
 
 function cardFor(row) {
   const li = element('li', `row ${row.level}`);
@@ -30,13 +30,19 @@ function cardFor(row) {
   return li;
 }
 
+// The renderer is a small script, so it cannot require() the view-model module; it keeps its own key per row.
+const keyOf = (row) => JSON.stringify([row.item, row.level, row.reasoning, row.estimated, row.target, row.alternatives, row.icon]);
+
 window.macromind.onViewModel((vm) => {
+  const rowsByKey = new Map(vm.rows.map((row) => [keyOf(row), row]));
   const next = new Map();
-  for (const row of vm.rows) {
-    const key = JSON.stringify([row.item, row.level, row.reasoning, row.estimated, row.target, row.alternatives]);
-    next.set(key, shown.get(key) || cardFor(row));
+  for (const [key, row] of rowsByKey) next.set(key, shown.get(key) || cardFor(row));
+  for (const [key, card] of shown) if (!next.has(key)) card.remove();       // only departed cards leave
+  let previous = null;
+  for (const card of next.values()) {                                        // only new or moved cards are placed
+    const expected = previous ? previous.nextSibling : list.firstChild;
+    if (card !== expected) list.insertBefore(card, expected);
+    previous = card;
   }
-  shown.clear();
-  next.forEach((card, key) => shown.set(key, card));
-  list.replaceChildren(...next.values());
+  shown = next;
 });
