@@ -11,9 +11,7 @@ import java.util.function.Predicate;
  */
 final class CoreItemRules {
 
-    static final long CORE_MIN_SECONDS = 600;
     static final int MAX_ITEM_SLOTS = 6;
-    static final long BOOTS_MIN_SECONDS = 180;
 
     private final GameState gameState;
     private final AdviceFactory factory;
@@ -27,7 +25,7 @@ final class CoreItemRules {
 
     List<BuildAdvice> advise() {
         List<BuildAdvice> advice = new java.util.ArrayList<>(defaultBoots());
-        if (gameState.enemies().isEmpty() || gameState.gameTimeInSeconds() < CORE_MIN_SECONDS || isBuildComplete()) {
+        if (gameState.enemies().isEmpty() || gameState.gameTimeInSeconds() < AdviceThresholds.MID_GAME_SECONDS || isBuildComplete()) {
             return advice;
         }
         advice.addAll(factory.create(new AdviceRule(classFit(), reasoning(),
@@ -41,7 +39,7 @@ final class CoreItemRules {
     }
 
     private List<BuildAdvice> defaultBoots() {
-        if (me.hasBoots() || gameState.gameTimeInSeconds() < BOOTS_MIN_SECONDS) {
+        if (me.hasBoots() || gameState.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
             return List.of();
         }
         return factory.create(new AdviceRule(i -> i.hasTag(ItemTag.BOOTS) && fitsBootsFor(i),

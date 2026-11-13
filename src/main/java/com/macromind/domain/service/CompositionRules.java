@@ -9,11 +9,7 @@ import java.util.function.Predicate;
 /** Rules driven by what the enemy team is made of (frontline, squishies, assassins, shields, crowd control). */
 final class CompositionRules {
 
-    static final long BOOTS_MIN_SECONDS = 180;
-    static final long MID_GAME_SECONDS = 600;
     static final int FED_KILL_LEAD = 4;
-    private static final double HEAVY_AD_RATIO = 0.7;
-    private static final double HEAVY_AP_RATIO = 0.3;
 
     private final GameState gameState;
     private final AdviceFactory factory;
@@ -41,33 +37,28 @@ final class CompositionRules {
         return advice;
     }
 
-    private List<BuildAdvice> rule(Predicate<Item> matcher, String reasoning, AdvicePriority priority,
-                                   AdviceCategory category, Player target) {
-        return factory.create(new AdviceRule(matcher, reasoning, priority, category), target);
-    }
-
     private List<BuildAdvice> boots() {
-        if (me.hasBoots() || gameState.gameTimeInSeconds() < BOOTS_MIN_SECONDS) {
+        if (me.hasBoots() || gameState.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
             return List.of();
         }
         double adRatio = threat.adRatio();
-        if (adRatio > HEAVY_AD_RATIO) {
-            return rule(i -> i.hasTag(ItemTag.BOOTS) && i.stats().armor() > 0,
+        if (adRatio > AdviceThresholds.HEAVY_AD_RATIO) {
+            return factory.create(i -> i.hasTag(ItemTag.BOOTS) && i.stats().armor() > 0,
                     "Enemy team is mostly AD and you have no boots. Armor boots cut their damage.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, threat.highestAdThreat());
         }
-        if (adRatio < HEAVY_AP_RATIO) {
-            return rule(i -> i.hasTag(ItemTag.BOOTS) && i.stats().magicResist() > 0,
+        if (adRatio < AdviceThresholds.HEAVY_AP_RATIO) {
+            return factory.create(i -> i.hasTag(ItemTag.BOOTS) && i.stats().magicResist() > 0,
                     "Enemy team is mostly AP and you have no boots. Magic resist boots cut their damage.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, threat.highestApThreat());
         }
         if (me.dealsMagicDamage()) {
-            return rule(i -> i.hasTag(ItemTag.BOOTS) && i.hasTag(ItemTag.MAGIC_PENETRATION_FLAT),
+            return factory.create(i -> i.hasTag(ItemTag.BOOTS) && i.hasTag(ItemTag.MAGIC_PENETRATION_FLAT),
                     "You have no boots and the enemy damage is mixed. Penetration boots add damage.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, null);
         }
         if (me.dealsPhysicalDamage()) {
-            return rule(i -> i.hasTag(ItemTag.BOOTS) && i.stats().attackSpeed() > 0,
+            return factory.create(i -> i.hasTag(ItemTag.BOOTS) && i.stats().attackSpeed() > 0,
                     "You have no boots and the enemy damage is mixed. Attack speed boots add damage.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, null);
         }
@@ -75,17 +66,17 @@ final class CompositionRules {
     }
 
     private List<BuildAdvice> percentPenetrationVsFrontline() {
-        if (!team.hasFrontline() || gameState.gameTimeInSeconds() < MID_GAME_SECONDS) {
+        if (!team.hasFrontline() || gameState.gameTimeInSeconds() < AdviceThresholds.MID_GAME_SECONDS) {
             return List.of();
         }
         Player frontliner = firstOf(ChampionClass.TANK, ChampionClass.BRUISER);
         if (me.dealsPhysicalDamage()) {
-            return rule(i -> i.hasTag(ItemTag.ARMOR_PENETRATION_PERCENT),
+            return factory.create(i -> i.hasTag(ItemTag.ARMOR_PENETRATION_PERCENT),
                     "Enemy team has several frontliners. Percent armor penetration keeps your damage relevant.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, frontliner);
         }
         if (me.dealsMagicDamage()) {
-            return rule(i -> i.hasTag(ItemTag.MAGIC_PENETRATION_PERCENT),
+            return factory.create(i -> i.hasTag(ItemTag.MAGIC_PENETRATION_PERCENT),
                     "Enemy team has several frontliners. Percent magic penetration keeps your damage relevant.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, frontliner);
         }
@@ -93,16 +84,16 @@ final class CompositionRules {
     }
 
     private List<BuildAdvice> flatPenetrationVsSquishy() {
-        if (!team.isSquishy() || gameState.gameTimeInSeconds() < MID_GAME_SECONDS) {
+        if (!team.isSquishy() || gameState.gameTimeInSeconds() < AdviceThresholds.MID_GAME_SECONDS) {
             return List.of();
         }
         if (me.dealsPhysicalDamage()) {
-            return rule(i -> i.hasTag(ItemTag.ARMOR_PENETRATION_FLAT),
+            return factory.create(i -> i.hasTag(ItemTag.ARMOR_PENETRATION_FLAT),
                     "Enemy team has no frontline. Lethality is the most efficient damage against squishy targets.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, null);
         }
         if (me.dealsMagicDamage()) {
-            return rule(i -> i.hasTag(ItemTag.MAGIC_PENETRATION_FLAT),
+            return factory.create(i -> i.hasTag(ItemTag.MAGIC_PENETRATION_FLAT),
                     "Enemy team has no frontline. Flat magic penetration is the most efficient against squishy targets.",
                     AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE, null);
         }
@@ -113,7 +104,7 @@ final class CompositionRules {
         if (!team.hasShieldChampions() || !me.dealsPhysicalDamage()) {
             return List.of();
         }
-        return rule(i -> i.hasTag(ItemTag.SHIELD_BREAK),
+        return factory.create(i -> i.hasTag(ItemTag.SHIELD_BREAK),
                 "Enemy team has several shield champions. Lethality items reduce the shields they gain.",
                 AdvicePriority.RECOMMENDED, AdviceCategory.UTILITY, null);
     }
@@ -129,7 +120,7 @@ final class CompositionRules {
         if (fed == null && assassins.size() < TeamProfile.ASSASSINS_MIN) {
             return List.of();
         }
-        return rule(i -> i.hasTag(ItemTag.SPELL_SHIELD),
+        return factory.create(i -> i.hasTag(ItemTag.SPELL_SHIELD),
                 fed != null ? "A fed assassin is on the enemy team. A spell shield blocks their opening ability."
                         : "Enemy team has several assassins. A spell shield blocks their opening ability.",
                 fed != null ? AdvicePriority.CRITICAL : AdvicePriority.RECOMMENDED,
@@ -140,7 +131,7 @@ final class CompositionRules {
         if (!team.hasHeavyCrowdControl()) {
             return List.of();
         }
-        return rule(i -> i.hasTag(ItemTag.TENACITY),
+        return factory.create(i -> i.hasTag(ItemTag.TENACITY),
                 "Enemy team has heavy crowd control. Tenacity shortens how long you are locked down.",
                 AdvicePriority.RECOMMENDED, AdviceCategory.UTILITY, null);
     }
@@ -149,7 +140,7 @@ final class CompositionRules {
         if (!team.hasHeavyCrowdControl()) {
             return List.of();
         }
-        return rule(i -> i.hasTag(ItemTag.CLEANSE),
+        return factory.create(i -> i.hasTag(ItemTag.CLEANSE),
                 "Enemy team has heavy crowd control. A cleanse lets you break out of it.",
                 AdvicePriority.RECOMMENDED, AdviceCategory.UTILITY, null);
     }
