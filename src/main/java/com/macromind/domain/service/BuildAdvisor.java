@@ -4,7 +4,9 @@ import com.macromind.domain.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public record BuildAdvisor(
         GameState gameState,
@@ -44,9 +46,9 @@ public record BuildAdvisor(
     private static final int ASSASSIN_BUILD_THRESHOLD = 150;
 
     private List<BuildAdvice> adviceFor(AdviceRule rule, Player target) {
-        List<Item> owned = gameState.activePlayer().items();
+        Set<String> ownedNames = gameState.activePlayer().items().stream().map(Item::name).collect(Collectors.toSet());
         return possibleItems.stream()
-                .filter(item -> !owned.contains(item))
+                .filter(item -> !ownedNames.contains(item.name()))
                 .filter(rule.itemMatcher())
                 .map(item -> new BuildAdvice(item, rule.reasoning(), rule.priority(), rule.category(),
                         target, confidenceFor(), gameState.gameTimeInSeconds()))

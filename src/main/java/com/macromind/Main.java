@@ -28,6 +28,9 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         DataDragonClient dragon = new DataDragonClient(Path.of(System.getProperty("user.home"), ".macromind", "cache"));
         dragon.load();
+        if (!dragon.isLoaded()) {
+            System.err.println("No item catalogue: running without advice. Restart once Data Dragon is reachable.");
+        }
         GameStateMapper mapper = new GameStateMapper(new StatEstimator(dragon::championBaseStats),
                 dragon.items(), dragon::championClass);
         LiveClientPoller poller = new LiveClientPoller(LIVE_CLIENT, mapper);
@@ -46,9 +49,9 @@ public final class Main {
                 List<BuildAdvice> advice = new BuildAdvisor(state.get(), dragon.items()).generateBuildAdvices();
                 firstSeen[0] = OverlayVisibility.track(firstSeen[0], advice, state.get().gameTimeInSeconds());
                 server.publish(OverlayVisibility.shouldShow(state.get(), advice, firstSeen[0]), advice);
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
+                // a thrown exception would silently cancel the schedule, so nothing may escape this task
                 System.err.println("Poll failed: " + e);
-                server.publish(false, List.of());
             }
         }, 0, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }

@@ -44,11 +44,14 @@ final class DataDragonParser {
         JsonNode data = dataNode(json);
         data.fields().forEachRemaining(entry -> {
             JsonNode s = entry.getValue().path("stats");
-            result.put(entry.getKey(), new ChampionBaseStats(
+            ChampionBaseStats stats = new ChampionBaseStats(
                     s.path("hp").asDouble(), s.path("hpperlevel").asDouble(),
                     s.path("armor").asDouble(), s.path("armorperlevel").asDouble(),
                     s.path("spellblock").asDouble(), s.path("spellblockperlevel").asDouble(),
-                    s.path("attackdamage").asDouble(), s.path("attackdamageperlevel").asDouble()));
+                    s.path("attackdamage").asDouble(), s.path("attackdamageperlevel").asDouble());
+            // The live client reports display names ("Miss Fortune"); Data Dragon keys by id ("MissFortune").
+            result.put(entry.getKey(), stats);
+            result.put(entry.getValue().path("name").asText(entry.getKey()), stats);
         });
         return Map.copyOf(result);
     }
@@ -57,14 +60,18 @@ final class DataDragonParser {
         Map<String, ChampionClass> result = new HashMap<>();
         dataNode(json).fields().forEachRemaining(entry -> {
             String firstTag = entry.getValue().path("tags").path(0).asText();
-            switch (firstTag) {
-                case "Marksman" -> result.put(entry.getKey(), ChampionClass.MARKSMAN);
-                case "Mage" -> result.put(entry.getKey(), ChampionClass.MAGE);
-                case "Tank" -> result.put(entry.getKey(), ChampionClass.TANK);
-                case "Fighter" -> result.put(entry.getKey(), ChampionClass.BRUISER);
-                case "Assassin" -> result.put(entry.getKey(), ChampionClass.ASSASSIN);
-                case "Support" -> result.put(entry.getKey(), ChampionClass.SUPPORT);
-                default -> { }
+            ChampionClass championClass = switch (firstTag) {
+                case "Marksman" -> ChampionClass.MARKSMAN;
+                case "Mage" -> ChampionClass.MAGE;
+                case "Tank" -> ChampionClass.TANK;
+                case "Fighter" -> ChampionClass.BRUISER;
+                case "Assassin" -> ChampionClass.ASSASSIN;
+                case "Support" -> ChampionClass.SUPPORT;
+                default -> null;
+            };
+            if (championClass != null) {
+                result.put(entry.getKey(), championClass);
+                result.put(entry.getValue().path("name").asText(entry.getKey()), championClass);
             }
         });
         return Map.copyOf(result);
@@ -75,6 +82,9 @@ final class DataDragonParser {
         dataNode(json).fields().forEachRemaining(entry -> {
             JsonNode node = entry.getValue();
             String name = node.path("name").asText();
+            if (!isBuyableOnSummonersRift(node, name)) {
+                return;
+            }
             JsonNode s = node.path("stats");
             ItemStats stats = new ItemStats(
                     s.path("FlatPhysicalDamageMod").asInt(), s.path("FlatMagicDamageMod").asInt(),
@@ -88,6 +98,16 @@ final class DataDragonParser {
                     stats, TAGS_BY_ITEM_NAME.getOrDefault(name, Set.of())));
         });
         return List.copyOf(result);
+    }
+
+    // Real item.json holds Arena/ARAM/event copies and unbuyable entries; only these can be advised.
+    private static boolean isBuyableOnSummonersRift(JsonNode node, String name) {
+        return !name.isEmpty()
+                && node.path("maps").path("11").asBoolean(false)
+                && node.path("gold").path("purchasable").asBoolean(false)
+                && node.path("inStore").asBoolean(true)
+                && !node.has("requiredChampion")
+                && !node.has("requiredAlly");
     }
 
     private static JsonNode dataNode(String json) {

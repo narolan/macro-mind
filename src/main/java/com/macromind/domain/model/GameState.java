@@ -72,7 +72,7 @@ public record GameState(
     }
 
     private double calculateIndividualAdThreat(Player player) {
-        double baseAd = player.stats().attackDamage();
+        double baseAd = isEstimatedMage(player) ? 0 : player.stats().attackDamage();
         double kdaMultiplier = Math.max(0.5, getKdaMultiplier(player));
         double goldMultiplier = 1.0 + (player.totalGold() / 8000.0);
 
@@ -80,11 +80,16 @@ public record GameState(
     }
 
     private double calculateIndividualApThreat(Player player) {
-        double baseAp = player.stats().abilityPower();
+        // Data Dragon has no base AP, so an estimated mage's damage would otherwise read as pure AD.
+        double baseAp = player.stats().abilityPower() + (isEstimatedMage(player) ? player.stats().attackDamage() : 0);
         double kdaMultiplier = Math.max(0.5, getKdaMultiplier(player));
         double goldMultiplier = 1.0 + (player.totalGold() / 8000.0);
 
         return baseAp * kdaMultiplier * goldMultiplier;
+    }
+
+    private static boolean isEstimatedMage(Player player) {
+        return player.isEstimated() && player.championClass() == MAGE;
     }
 
     private double getKdaMultiplier(Player player) {

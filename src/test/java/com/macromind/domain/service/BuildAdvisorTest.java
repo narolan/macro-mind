@@ -95,4 +95,16 @@ class BuildAdvisorTest {
 
         assertTrue(advices.stream().allMatch(a -> a.confidence() == Confidence.EXACT));
     }
+
+    @Test
+    void doesNotAdviseAnItemOwnedUnderADifferentId() {
+        Item owned = new Item(1, "Void Staff", 3000, NO_STATS, java.util.Set.of(ItemTag.MAGIC_PENETRATION_PERCENT));
+        Item otherCopy = new Item(2, "Void Staff", 3000, NO_STATS, java.util.Set.of(ItemTag.MAGIC_PENETRATION_PERCENT));
+        Player active = player("Ahri", ChampionClass.MAGE, false, List.of(owned), AVERAGE_STATS);
+        Player enemy = player("Tank", ChampionClass.TANK, true, List.of(), stats(80, 200, 100, 100));
+
+        List<BuildAdvice> advices = new BuildAdvisor(game(active, List.of(enemy)), List.of(otherCopy)).generateBuildAdvices();
+
+        assertTrue(advices.isEmpty());
+    }
 }

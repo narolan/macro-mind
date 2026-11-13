@@ -57,4 +57,20 @@ class DataDragonParserTest {
 
         assertEquals(com.macromind.domain.model.ChampionClass.TANK, classes.get("Malphite"));
     }
+
+    @Test
+    void keepsOnlyPurchasableSummonersRiftItems() throws IOException {
+        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+
+        assertEquals(java.util.Set.of(3075, 3165), items.stream().map(Item::id).collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
+    void keysChampionsByDisplayNameAsWellAsId() throws IOException {
+        String json = fixture("ddragon-champion.json");
+
+        assertTrue(DataDragonParser.parseChampions(json).containsKey("Miss Fortune"));
+        assertEquals(com.macromind.domain.model.ChampionClass.MARKSMAN,
+                DataDragonParser.parseChampionClasses(json).get("Miss Fortune"));
+    }
 }
