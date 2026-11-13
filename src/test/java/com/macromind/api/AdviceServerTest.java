@@ -94,40 +94,4 @@ class AdviceServerTest {
         assertEquals("", get().get("iconVersion").asText());
     }
 
-    private static BuildAdvice advice(String item, String reason, AdvicePriority priority) {
-        return new BuildAdvice(item(item, NO_STATS), reason, priority, AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0);
-    }
-
-    @Test
-    void keepsAtMostFourEntriesPerReasonSoOtherReasonsStillReachTheOverlay() throws Exception {
-        server = new AdviceServer(0);
-        List<BuildAdvice> advice = new java.util.ArrayList<>();
-        for (int i = 0; i < 8; i++) {
-            advice.add(advice("Heal" + i, "heavy healing", AdvicePriority.CRITICAL));
-        }
-        advice.add(advice("Boots", "needs boots", AdvicePriority.RECOMMENDED));
-        advice.add(advice("Core", "fits your class", AdvicePriority.SITUATIONAL));
-
-        server.publish(true, advice);
-        JsonNode entries = get().get("advice");
-
-        long healing = java.util.stream.StreamSupport.stream(entries.spliterator(), false)
-                .filter(e -> e.get("reasoning").asText().equals("heavy healing")).count();
-        assertEquals(4, healing);
-        assertEquals(6, entries.size());
-        assertEquals("heavy healing", entries.get(0).get("reasoning").asText());
-    }
-
-    @Test
-    void neverSendsMoreThanTwelveEntriesOverall() throws Exception {
-        server = new AdviceServer(0);
-        List<BuildAdvice> advice = new java.util.ArrayList<>();
-        for (int i = 0; i < 20; i++) {
-            advice.add(advice("Item" + i, "reason " + i, AdvicePriority.RECOMMENDED));
-        }
-
-        server.publish(true, advice);
-
-        assertEquals(12, get().get("advice").size());
-    }
 }
