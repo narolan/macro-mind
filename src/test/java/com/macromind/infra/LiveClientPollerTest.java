@@ -85,4 +85,25 @@ class LiveClientPollerTest {
         assertTrue(new LiveClientPoller(url, MAPPER, errors::add).poll().isEmpty());
         assertTrue(errors.isEmpty());
     }
+
+    @Test
+    void rejectsABaseUrlWithoutAScheme() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new LiveClientPoller("127.0.0.1:2999", MAPPER));
+
+        assertNotNull(error.getMessage());
+    }
+
+    @Test
+    void rejectsHostsThatOnlyLookLikeLoopback() {
+        for (String url : List.of("https://127.0.0.1.evil.com", "https://evil.com/127.0.0.1", "https://user@evil.com")) {
+            assertThrows(IllegalArgumentException.class, () -> new LiveClientPoller(url, MAPPER), url);
+        }
+    }
+
+    @Test
+    void acceptsBothLoopbackSpellings() {
+        assertDoesNotThrow(() -> new LiveClientPoller("https://127.0.0.1:2999", MAPPER));
+        assertDoesNotThrow(() -> new LiveClientPoller("https://localhost:2999", MAPPER));
+    }
 }
