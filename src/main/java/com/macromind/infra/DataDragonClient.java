@@ -23,6 +23,7 @@ public class DataDragonClient {
     private final HttpClient http = HttpClient.newHttpClient();
     private final Path cacheDir;
     private Map<String, ChampionBaseStats> champions = Map.of();
+    private Map<String, com.macromind.domain.model.ChampionClass> classes = Map.of();
     private List<Item> items = List.of();
 
     public DataDragonClient(Path cacheDir) {
@@ -33,7 +34,9 @@ public class DataDragonClient {
     public void load() {
         try {
             String version = new ObjectMapper().readTree(fetch(BASE + "/api/versions.json")).get(0).asText();
-            champions = DataDragonParser.parseChampions(cached(version, "championFull.json"));
+            String championJson = cached(version, "championFull.json");
+            champions = DataDragonParser.parseChampions(championJson);
+            classes = DataDragonParser.parseChampionClasses(championJson);
             items = DataDragonParser.parseItems(cached(version, "item.json"));
         } catch (Exception e) {
             System.err.println("Data Dragon unavailable, enemy stats will be unreliable: " + e.getMessage());
@@ -42,6 +45,11 @@ public class DataDragonClient {
 
     public Optional<ChampionBaseStats> championBaseStats(String championName) {
         return Optional.ofNullable(champions.get(championName));
+    }
+
+    /** Unknown champions default to BRUISER, the most neutral class for the rules. */
+    public com.macromind.domain.model.ChampionClass championClass(String championName) {
+        return classes.getOrDefault(championName, com.macromind.domain.model.ChampionClass.BRUISER);
     }
 
     public List<Item> items() {
