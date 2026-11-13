@@ -59,8 +59,8 @@ final class CoreItemRules {
     private Predicate<Item> classFit() {
         // boots are advised by their own rules
         return ((Predicate<Item>) i -> !i.hasTag(ItemTag.BOOTS)).and(switch (me.championClass()) {
-            case MARKSMAN -> i -> i.stats().attackDamage() > 0 || i.stats().attackSpeed() > 0 || i.stats().criticalStrikeChance() > 0;
-            case MAGE -> i -> i.stats().abilityPower() > 0;
+            case MARKSMAN -> ItemFit::givesPhysicalDamage;
+            case MAGE -> ItemFit::givesAbilityPower;
             case TANK -> CoreItemRules::isTankItem;
             case BRUISER -> i -> (i.stats().attackDamage() > 0 && i.stats().health() > 0) || i.stats().health() >= 300;
             case ASSASSIN -> i -> me.dealsMagicDamage() ? i.stats().abilityPower() > 0 : i.stats().attackDamage() > 0;

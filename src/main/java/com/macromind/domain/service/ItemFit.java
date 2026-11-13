@@ -20,11 +20,19 @@ final class ItemFit {
         return item.hasAnyTag(ItemTag.GRIEVOUS_WOUNDS, ItemTag.BOOTS, ItemTag.CLEANSE);
     }
 
+    /** Attack damage, attack speed or crit chance: stats a physical damage dealer wants. */
+    static boolean givesPhysicalDamage(Item item) {
+        return item.stats().attackDamage() > 0 || item.stats().attackSpeed() > 0 || item.stats().criticalStrikeChance() > 0;
+    }
+
+    static boolean givesAbilityPower(Item item) {
+        return item.stats().abilityPower() > 0;
+    }
+
     /** An item that only gives AD is useless to a mage, and vice versa. Neutral (defensive/utility) items fit anyone. */
     static boolean fitsDamageType(Item item, Player player) {
-        boolean givesAd = item.stats().attackDamage() > 0 || item.stats().attackSpeed() > 0
-                || item.stats().criticalStrikeChance() > 0;
-        boolean givesAp = item.stats().abilityPower() > 0;
+        boolean givesAd = givesPhysicalDamage(item);
+        boolean givesAp = givesAbilityPower(item);
         if (givesAd && !givesAp) {
             return player.dealsPhysicalDamage() || !player.dealsMagicDamage();
         }
