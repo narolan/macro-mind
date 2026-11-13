@@ -61,4 +61,15 @@ class BuildAdvisorTest {
 
         assertTrue(advices.isEmpty());
     }
+
+    @Test
+    void doesNotAdviseItemsTheActivePlayerAlreadyOwns() {
+        Player active = player("Ahri", ChampionClass.MAGE, false, List.of(MAGIC_PEN_ITEM), AVERAGE_STATS);
+        Player enemy = player("Tank", ChampionClass.TANK, true, List.of(), stats(80, 200, 100, 100));
+
+        List<BuildAdvice> advices = new BuildAdvisor(game(active, List.of(enemy)), List.of(MAGIC_PEN_ITEM))
+                .generateBuildAdvices();
+
+        assertTrue(advices.isEmpty());
+    }
 }

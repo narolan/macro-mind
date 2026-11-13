@@ -4,6 +4,7 @@ import com.macromind.domain.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public record BuildAdvisor(
         GameState gameState,
@@ -38,264 +39,121 @@ public record BuildAdvisor(
         return advices;
     }
 
+    private static final String AD_REASON = "Enemy team has heavy AD threat. Consider buying this item to survive their damage.";
+    private static final String AP_REASON = "Enemy team has heavy AP threat. Consider buying this item to survive their damage.";
+    private static final int ASSASSIN_BUILD_THRESHOLD = 150;
+
+    private List<BuildAdvice> adviceFor(AdviceRule rule, Player target) {
+        List<Item> owned = gameState.activePlayer().items();
+        return possibleItems.stream()
+                .filter(item -> !owned.contains(item))
+                .filter(rule.itemMatcher())
+                .map(item -> new BuildAdvice(item, rule.reasoning(), rule.priority(), rule.category(),
+                        target, gameState.gameTimeInSeconds()))
+                .toList();
+    }
+
+    private static boolean offensive(Item item) {
+        return item.stats().attackDamage() > 0 || item.stats().attackSpeed() > 0 || item.stats().criticalStrikeChance() > 0;
+    }
+
+    private static boolean magical(Item item) {
+        return item.stats().abilityPower() > 0 || item.stats().cooldownReduction() > 0;
+    }
+
+    private static boolean tagged(Item item, ItemTag... tags) {
+        for (ItemTag tag : tags) {
+            if (item.tags().contains(tag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean survivability(Item item) {
+        return tagged(item, ItemTag.BURST_RESISTANCE);
+    }
+
     private List<BuildAdvice> generateHeavyAdEnemyThreatAdvice(Player activePlayer) {
-        return switch(activePlayer.championClass()) {
-            case MARKSMAN -> {
-                if(!gameState.isActivePlayerSquishy()) {
-                    yield List.of();
-                }
-                yield possibleItems().stream()
-                    .filter(item -> item.stats().attackDamage() > 0 || item.stats().attackSpeed() > 0 || item.stats().criticalStrikeChance() > 0)
-                    .filter(item -> item.stats().armor() > 0 || item.tags().contains(ItemTag.BURST_RESISTANCE) || item.tags().contains(ItemTag.SPELL_SHIELD))
-                    .map(item -> new BuildAdvice(
-                            item,
-                            "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                            AdvicePriority.CRITICAL,
-                            AdviceCategory.DEFENSIVE,
-                            gameState.highestAdThreat(),
-                            gameState.gameTimeInSeconds()
-                    ))
-                    .toList();
-            }
-            case MAGE -> {
-                if(!gameState.isActivePlayerSquishy()) {
-                    yield List.of();
-                }
-                yield possibleItems().stream()
-                        .filter(item -> item.stats().abilityPower() > 0 || item.stats().cooldownReduction() > 0)
-                        .filter(item -> item.stats().armor() > 0 || item.tags().contains(ItemTag.SPELL_SHIELD) || item.tags().contains(ItemTag.BURST_RESISTANCE))
-                        .map(item -> new BuildAdvice(
-                                item,
-                                "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                                AdvicePriority.CRITICAL,
-                                AdviceCategory.DEFENSIVE,
-                                gameState.highestAdThreat(),
-                                gameState.gameTimeInSeconds()
-                        ))
-                        .toList();
-            }
-            case TANK -> possibleItems().stream()
-                    .filter(item -> item.stats().health() > 0 || item.stats().armor() > 0)
-                    .map(item -> new BuildAdvice(
-                            item,
-                            "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                            AdvicePriority.RECOMMENDED,
-                            AdviceCategory.DEFENSIVE,
-                            gameState.highestAdThreat(),
-                            gameState.gameTimeInSeconds()
-                    ))
-                    .toList();
-            case BRUISER -> {
-                if(gameState().isActivePlayerSquishy()) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.stats().armor() > 0)
-                            .filter(item -> item.stats().health() > 0 || item.stats().attackDamage() > 0 || item.tags().contains(ItemTag.BURST_RESISTANCE))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                }
-                yield List.of();
-            }
-            case ASSASSIN -> {
-                if(activePlayer.stats().attackDamage() > 150) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.name().equals("Guardian Angel"))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                } else if(activePlayer.stats().abilityPower() > 150) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.name().equals("Zhonya's Hourglass"))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                }
-                yield List.of();
-            }
-            case SUPPORT -> List.of();
-        };
+        return heavyThreatAdvice(activePlayer, AD_REASON, gameState.highestAdThreat(),
+                item -> item.stats().armor() > 0,
+                "Guardian Angel", "Zhonya's Hourglass");
     }
 
     private List<BuildAdvice> generateHeavyApEnemyThreatAdvice(Player activePlayer) {
+        return heavyThreatAdvice(activePlayer, AP_REASON, gameState.highestApThreat(),
+                item -> item.stats().magicResist() > 0,
+                "Guardian Angel", "Banshee's Veil", "Zhonya's Hourglass");
+    }
+
+    private List<BuildAdvice> heavyThreatAdvice(Player activePlayer, String reasoning, Player target,
+                                                Predicate<Item> resist, String... assassinItems) {
+        boolean squishy = gameState.isActivePlayerSquishy();
         return switch (activePlayer.championClass()) {
-            case MARKSMAN -> {
-                if(!gameState.isActivePlayerSquishy()) {
-                    yield List.of();
-                }
-                yield possibleItems().stream()
-                        .filter(item -> item.stats().attackDamage() > 0 || item.stats().attackSpeed() > 0 || item.stats().criticalStrikeChance() > 0)
-                        .filter(item -> item.stats().magicResist() > 0 || item.tags().contains(ItemTag.SPELL_SHIELD) || item.tags().contains(ItemTag.BURST_RESISTANCE))
-                        .map(item -> new BuildAdvice(
-                                item,
-                                "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                                AdvicePriority.CRITICAL,
-                                AdviceCategory.DEFENSIVE,
-                                gameState.highestApThreat(),
-                                gameState.gameTimeInSeconds()
-                        ))
-                        .toList();
-            }
-            case MAGE -> {
-                if(!gameState.isActivePlayerSquishy()) {
-                    yield List.of();
-                }
-                yield possibleItems().stream()
-                        .filter(item -> item.stats().abilityPower() > 0 || item.stats().cooldownReduction() > 0)
-                        .filter(item -> item.stats().magicResist() > 0 || item.tags().contains(ItemTag.SPELL_SHIELD) || item.tags().contains(ItemTag.BURST_RESISTANCE))
-                        .map(item -> new BuildAdvice(
-                                item,
-                                "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                                AdvicePriority.CRITICAL,
-                                AdviceCategory.DEFENSIVE,
-                                gameState.highestApThreat(),
-                                gameState.gameTimeInSeconds()
-                        ))
-                        .toList();
-            }
-            case TANK -> possibleItems().stream()
-                    .filter(item -> item.stats().health() > 0 || item.stats().magicResist() > 0)
-                    .map(item -> new BuildAdvice(
-                            item,
-                            "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                            AdvicePriority.RECOMMENDED,
-                            AdviceCategory.DEFENSIVE,
-                            gameState.highestApThreat(),
-                            gameState.gameTimeInSeconds()
-                    ))
-                    .toList();
-            case BRUISER -> {
-                if(gameState().isActivePlayerSquishy()) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.stats().magicResist() > 0)
-                            .filter(item -> item.stats().health() > 0 || item.stats().attackDamage() > 0 || item.tags().contains(ItemTag.BURST_RESISTANCE))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestApThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                }
-                yield List.of();
-            }
-            case ASSASSIN -> {
-                if(activePlayer.stats().attackDamage() > 150) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.name().equals("Guardian Angel"))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestApThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                } else if(activePlayer.stats().abilityPower() > 150) {
-                    yield possibleItems().stream()
-                            .filter(item -> item.name().equals("Banshee's Veil") || item.name().equals("Zhonya's Hourglass"))
-                            .map(item -> new BuildAdvice(
-                                    item,
-                                    "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
-                                    AdvicePriority.RECOMMENDED,
-                                    AdviceCategory.DEFENSIVE,
-                                    gameState.highestApThreat(),
-                                    gameState.gameTimeInSeconds()
-                            ))
-                            .toList();
-                }
-                yield List.of();
-            }
+            case MARKSMAN -> squishy
+                    ? adviceFor(new AdviceRule(
+                            item -> offensive(item) && (resist.test(item) || tagged(item, ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
+                            reasoning, AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE), target)
+                    : List.<BuildAdvice>of();
+            case MAGE -> squishy
+                    ? adviceFor(new AdviceRule(
+                            item -> magical(item) && (resist.test(item) || tagged(item, ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
+                            reasoning, AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE), target)
+                    : List.<BuildAdvice>of();
+            case TANK -> adviceFor(new AdviceRule(
+                    item -> item.stats().health() > 0 || resist.test(item),
+                    reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target);
+            case BRUISER -> squishy
+                    ? adviceFor(new AdviceRule(
+                            item -> resist.test(item) && (item.stats().health() > 0 || item.stats().attackDamage() > 0 || survivability(item)),
+                            reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target)
+                    : List.<BuildAdvice>of();
+            case ASSASSIN -> assassinAdvice(activePlayer, reasoning, target, assassinItems);
             case SUPPORT -> List.of();
         };
     }
 
+    private List<BuildAdvice> assassinAdvice(Player activePlayer, String reasoning, Player target, String[] assassinItems) {
+        List<String> names = List.of(assassinItems);
+        if (activePlayer.stats().attackDamage() > ASSASSIN_BUILD_THRESHOLD) {
+            return adviceFor(new AdviceRule(item -> item.name().equals("Guardian Angel"),
+                    reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target);
+        }
+        if (activePlayer.stats().abilityPower() > ASSASSIN_BUILD_THRESHOLD) {
+            return adviceFor(new AdviceRule(item -> names.contains(item.name()) && !item.name().equals("Guardian Angel"),
+                    reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target);
+        }
+        return List.of();
+    }
+
     private List<BuildAdvice> generateAntiHealAdvice() {
-        return possibleItems().stream()
-                .filter(item -> item.tags().contains(ItemTag.GRIEVOUS_WOUNDS))
-                .map(item -> new BuildAdvice(
-                        item,
-                        "Enemy team has heavy healing. Consider buying this item to apply Grievous Wounds.",
-                        AdvicePriority.CRITICAL,
-                        AdviceCategory.UTILITY,
-                        gameState.enemies().stream()
-                                .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() > 15)
-                                .findFirst()
-                                .orElse(null),
-                        gameState.gameTimeInSeconds()
-                ))
-                .toList();
+        Player target = gameState.enemies().stream()
+                .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() > 15)
+                .findFirst().orElse(null);
+        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.GRIEVOUS_WOUNDS),
+                "Enemy team has heavy healing. Consider buying this item to apply Grievous Wounds.",
+                AdvicePriority.CRITICAL, AdviceCategory.UTILITY), target);
     }
 
     private List<BuildAdvice> generateAntiArmorAdvice() {
-        return possibleItems.stream()
-                .filter(item -> item.tags().contains(ItemTag.ARMOR_PENETRATION_PERCENT))
-                .map(item -> new BuildAdvice(
-                        item,
-                        "Enemy team has high armor. Consider buying this item to penetrate their defenses.",
-                        AdvicePriority.RECOMMENDED,
-                        AdviceCategory.OFFENSIVE,
-                        gameState.enemies().stream()
-                                .filter(enemy -> enemy.stats().armor() > 150)
-                                .findFirst()
-                                .orElse(null),
-                        gameState.gameTimeInSeconds()
-                ))
-                .toList();
+        Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().armor() > 150).findFirst().orElse(null);
+        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.ARMOR_PENETRATION_PERCENT),
+                "Enemy team has high armor. Consider buying this item to penetrate their defenses.",
+                AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE), target);
     }
 
     private List<BuildAdvice> generateAntiMagicResistAdvice() {
-        return possibleItems.stream()
-                .filter(item -> item.tags().contains(ItemTag.MAGIC_PENETRATION_PERCENT))
-                .map(item -> new BuildAdvice(
-                        item,
-                        "Enemy team has high magic resistance. Consider buying this item to penetrate their defenses.",
-                        AdvicePriority.RECOMMENDED,
-                        AdviceCategory.OFFENSIVE,
-                        gameState.enemies().stream()
-                                .filter(enemy -> enemy.stats().magicResist() > 150)
-                                .findFirst()
-                                .orElse(null),
-                        gameState.gameTimeInSeconds()
-                ))
-                .toList();
+        Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().magicResist() > 150).findFirst().orElse(null);
+        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.MAGIC_PENETRATION_PERCENT),
+                "Enemy team has high magic resistance. Consider buying this item to penetrate their defenses.",
+                AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE), target);
     }
 
     private List<BuildAdvice> generatePercentHealthDamageAdvice(AdvicePriority advicePriority) {
-        return possibleItems.stream()
-                .filter(item -> item.tags().contains(ItemTag.PERCENT_HEALTH_DAMAGE))
-                .map(item -> new BuildAdvice(
-                        item,
-                        "Enemy team has high health. Consider buying this item to deal percentage health damage.",
-                        advicePriority,
-                        AdviceCategory.OFFENSIVE,
-                        gameState.enemies().stream()
-                                .filter(enemy -> enemy.stats().maxHealth() > 3500)
-                                .findFirst()
-                                .orElse(null),
-                        gameState.gameTimeInSeconds()
-                ))
-                .toList();
+        Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().maxHealth() > 3500).findFirst().orElse(null);
+        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.PERCENT_HEALTH_DAMAGE),
+                "Enemy team has high health. Consider buying this item to deal percentage health damage.",
+                advicePriority, AdviceCategory.OFFENSIVE), target);
     }
 
 }
