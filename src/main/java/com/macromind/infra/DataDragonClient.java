@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /** Loads static Riot Data Dragon data, cached on disk per patch; falls back to the newest cache when offline. */
-public class DataDragonClient {
+public final class DataDragonClient {
 
     private static final String DEFAULT_BASE = "https://ddragon.leagueoflegends.com";
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);

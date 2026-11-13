@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Serves GET /advice on loopback only. The latest result is swapped in as an immutable value. */
-public class AdviceServer {
+public final class AdviceServer {
 
     private static final int HTTP_OK = 200;
     private static final int HTTP_FORBIDDEN = 403;

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /** Maps a Live Client /allgamedata response to a GameState. The active player is exact, everyone else is estimated. */
-public class GameStateMapper {
+public final class GameStateMapper {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /** Polls the local League client. Certificate checks are skipped ONLY for loopback hosts. */
-public class LiveClientPoller {
+public final class LiveClientPoller {
 
     private static final Set<String> LOOPBACK_HOSTS = Set.of("127.0.0.1", "localhost");
     private static final String ALL_GAME_DATA_PATH = "/liveclientdata/allgamedata";
