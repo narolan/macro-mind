@@ -3,6 +3,7 @@ package com.macromind.infra;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.macromind.domain.model.ChampionBaseStats;
+import com.macromind.domain.model.ChampionClass;
 import com.macromind.domain.model.Item;
 import com.macromind.domain.model.ItemStats;
 import com.macromind.domain.model.ItemTag;
@@ -48,6 +49,23 @@ final class DataDragonParser {
                     s.path("armor").asDouble(), s.path("armorperlevel").asDouble(),
                     s.path("spellblock").asDouble(), s.path("spellblockperlevel").asDouble(),
                     s.path("attackdamage").asDouble(), s.path("attackdamageperlevel").asDouble()));
+        });
+        return Map.copyOf(result);
+    }
+
+    static Map<String, ChampionClass> parseChampionClasses(String json) {
+        Map<String, ChampionClass> result = new HashMap<>();
+        dataNode(json).fields().forEachRemaining(entry -> {
+            String firstTag = entry.getValue().path("tags").path(0).asText();
+            switch (firstTag) {
+                case "Marksman" -> result.put(entry.getKey(), ChampionClass.MARKSMAN);
+                case "Mage" -> result.put(entry.getKey(), ChampionClass.MAGE);
+                case "Tank" -> result.put(entry.getKey(), ChampionClass.TANK);
+                case "Fighter" -> result.put(entry.getKey(), ChampionClass.BRUISER);
+                case "Assassin" -> result.put(entry.getKey(), ChampionClass.ASSASSIN);
+                case "Support" -> result.put(entry.getKey(), ChampionClass.SUPPORT);
+                default -> { }
+            }
         });
         return Map.copyOf(result);
     }

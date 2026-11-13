@@ -13,7 +13,8 @@ public record Player(
         Role role,
         KDA kda,
         int totalGold,
-        boolean isEstimated
+        boolean isEstimated,
+        boolean isDead
 ) {
 
     public boolean hasGrievousWoundsItem() {

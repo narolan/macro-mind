@@ -50,4 +50,11 @@ class DataDragonParserTest {
         assertTrue(DataDragonParser.parseItems("not json").isEmpty());
         assertTrue(DataDragonParser.parseChampions("not json").isEmpty());
     }
+
+    @Test
+    void mapsFirstDataDragonTagToChampionClass() throws IOException {
+        var classes = DataDragonParser.parseChampionClasses(fixture("ddragon-champion.json"));
+
+        assertEquals(com.macromind.domain.model.ChampionClass.TANK, classes.get("Malphite"));
+    }
 }
