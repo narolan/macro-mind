@@ -12,5 +12,10 @@ public enum ItemTag {
     TENACITY,
     ON_HIT,
     BURST_RESISTANCE,
-    SLOW_EFFECT
+    SLOW_EFFECT,
+    BOOTS,
+    COMPONENT,
+    STARTER,
+    ENCHANTER,
+    CLEANSE
 }

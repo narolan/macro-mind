@@ -27,7 +27,12 @@ class BuildAdvisorBranchesTest {
 
     private static List<BuildAdvice> advise(ChampionClass championClass, PlayerStats stats, Player enemy, Item... items) {
         Player active = player("Me", championClass, false, List.of(), stats);
-        return new BuildAdvisor(game(active, List.of(enemy)), List.of(items)).generateBuildAdvices();
+        return urgent(new BuildAdvisor(game(active, List.of(enemy)), List.of(items)).generateBuildAdvices());
+    }
+
+    /** Threat rules are under test here; the low-priority class-fit advice has its own tests. */
+    private static List<BuildAdvice> urgent(List<BuildAdvice> advice) {
+        return advice.stream().filter(a -> a.priority() != AdvicePriority.SITUATIONAL).toList();
     }
 
     private static List<String> names(List<BuildAdvice> advice) {
@@ -92,7 +97,7 @@ class BuildAdvisorBranchesTest {
         Player active = player("Me", ChampionClass.MAGE, false,
                 List.of(item("Shield", NO_STATS, ItemTag.SPELL_SHIELD)), sturdy);
 
-        assertTrue(new BuildAdvisor(game(active, List.of(AD_ENEMY)), List.of(AP_ARMOR)).generateBuildAdvices().isEmpty());
+        assertTrue(urgent(new BuildAdvisor(game(active, List.of(AD_ENEMY)), List.of(AP_ARMOR)).generateBuildAdvices()).isEmpty());
     }
 
     @Test

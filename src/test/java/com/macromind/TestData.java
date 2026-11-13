@@ -46,4 +46,29 @@ public final class TestData {
     public static GameState game(Player active, List<Player> enemies) {
         return new GameState(600, active, List.of(), enemies, GameMode.SUMMONERS_RIFT);
     }
+
+    public static Item itemWith(String name, int gold, ItemStats stats, ItemTag... tags) {
+        return new Item(name.hashCode(), name, gold, stats, Set.of(tags));
+    }
+
+    /** Item stats with only the fields the rule tests care about. */
+    public static ItemStats itemStats(int attackDamage, int abilityPower, int armor, int magicResist, int health,
+                                      int lethality, int flatMagicPen, double attackSpeed, double abilityHaste) {
+        return new ItemStats(attackDamage, abilityPower, armor, magicResist, health, 0, lethality, flatMagicPen,
+                attackSpeed, abilityHaste, 0, 0);
+    }
+
+    public static Player withGold(Player p, int gold) {
+        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
+                p.stats(), p.role(), p.kda(), gold, p.isEstimated(), p.isDead());
+    }
+
+    public static GameState gameAt(long seconds, Player active, List<Player> enemies) {
+        return new GameState(seconds, active, List.of(), enemies, GameMode.SUMMONERS_RIFT);
+    }
+
+    public static Player withKda(Player p, int kills, int deaths, int assists) {
+        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
+                p.stats(), p.role(), new KDA(kills, deaths, assists), p.totalGold(), p.isEstimated(), p.isDead());
+    }
 }

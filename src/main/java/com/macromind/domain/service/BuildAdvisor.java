@@ -4,9 +4,7 @@ import com.macromind.domain.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public record BuildAdvisor(
         GameState gameState,
@@ -38,7 +36,10 @@ public record BuildAdvisor(
         if(gameState.getEnemyAdRatio() < 0.3) {
             advices.addAll(generateHeavyApEnemyThreatAdvice(activePlayer));
         }
-        return advices;
+        AdviceFactory factory = new AdviceFactory(gameState, possibleItems);
+        advices.addAll(new CompositionRules(gameState, factory).advise());
+        advices.addAll(new CoreItemRules(gameState, factory).advise());
+        return AdviceRanker.rank(advices, activePlayer.totalGold());
     }
 
     private static final String AD_REASON = "Enemy team has heavy AD threat. Consider buying this item to survive their damage.";
@@ -46,17 +47,7 @@ public record BuildAdvisor(
     private static final int ASSASSIN_BUILD_THRESHOLD = 150;
 
     private List<BuildAdvice> adviceFor(AdviceRule rule, Player target) {
-        Set<String> ownedNames = gameState.activePlayer().items().stream().map(Item::name).collect(Collectors.toSet());
-        return possibleItems.stream()
-                .filter(item -> !ownedNames.contains(item.name()))
-                .filter(rule.itemMatcher())
-                .map(item -> new BuildAdvice(item, rule.reasoning(), rule.priority(), rule.category(),
-                        target, confidenceFor(), gameState.gameTimeInSeconds()))
-                .toList();
-    }
-
-    private Confidence confidenceFor() {
-        return gameState.enemies().stream().anyMatch(Player::isEstimated) ? Confidence.ESTIMATED : Confidence.EXACT;
+        return new AdviceFactory(gameState, possibleItems).create(rule, target);
     }
 
     private static boolean offensive(Item item) {

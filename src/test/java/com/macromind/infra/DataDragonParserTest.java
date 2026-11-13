@@ -38,7 +38,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void appliesGrievousWoundsTagFromCuratedTable() throws IOException {
+    void derivesGrievousWoundsTagFromDescription() throws IOException {
         List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
 
         Item morello = items.stream().filter(i -> i.name().equals("Morellonomicon")).findFirst().orElseThrow();
@@ -80,5 +80,98 @@ class DataDragonParserTest {
 
         Item gunblade = items.stream().filter(i -> i.name().equals("Hextech Gunblade")).findFirst().orElseThrow();
         assertEquals(10, gunblade.stats().omnivamp());
+    }
+
+    private static Map<String, Item> realItems() throws IOException {
+        return DataDragonParser.parseItems(fixture("ddragon-item-real.json")).stream()
+                .collect(java.util.stream.Collectors.toMap(Item::name, i -> i, (a, b) -> a));
+    }
+
+    private static void assertTags(Item item, ItemTag... expected) {
+        for (ItemTag tag : expected) {
+            assertTrue(item.tags().contains(tag), item.name() + " should have " + tag + " but has " + item.tags());
+        }
+    }
+
+    @Test
+    void derivesPenetrationAndWoundsTagsFromRealDescriptions() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTags(items.get("Mortal Reminder"), ItemTag.GRIEVOUS_WOUNDS, ItemTag.ARMOR_PENETRATION_PERCENT);
+        assertTags(items.get("Void Staff"), ItemTag.MAGIC_PENETRATION_PERCENT);
+        assertTags(items.get("Bramble Vest"), ItemTag.GRIEVOUS_WOUNDS, ItemTag.COMPONENT);
+        assertTags(items.get("Executioner's Calling"), ItemTag.GRIEVOUS_WOUNDS, ItemTag.COMPONENT);
+        assertTags(items.get("Thornmail"), ItemTag.GRIEVOUS_WOUNDS);
+    }
+
+    @Test
+    void parsesLethalityAndFlatMagicPenetrationIntoStatsAndTags() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTags(items.get("Serpent's Fang"), ItemTag.ARMOR_PENETRATION_FLAT, ItemTag.SHIELD_BREAK);
+        assertEquals(15, items.get("Serpent's Fang").stats().flatArmorPen());
+        assertTags(items.get("Sorcerer's Shoes"), ItemTag.MAGIC_PENETRATION_FLAT, ItemTag.BOOTS);
+        assertEquals(12, items.get("Sorcerer's Shoes").stats().flatMagicPen());
+    }
+
+    @Test
+    void derivesShieldPercentHealthTenacityAndOnHitTags() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTags(items.get("Banshee's Veil"), ItemTag.SPELL_SHIELD);
+        assertTags(items.get("Edge of Night"), ItemTag.SPELL_SHIELD, ItemTag.ARMOR_PENETRATION_FLAT);
+        assertTags(items.get("Blade of The Ruined King"), ItemTag.PERCENT_HEALTH_DAMAGE, ItemTag.ON_HIT);
+        assertTags(items.get("Liandry's Torment"), ItemTag.PERCENT_HEALTH_DAMAGE);
+        assertTags(items.get("Mercury's Treads"), ItemTag.TENACITY, ItemTag.BOOTS);
+        assertTags(items.get("Maw of Malmortius"), ItemTag.BURST_RESISTANCE);
+    }
+
+    @Test
+    void parsesAbilityHasteIntoCooldownReduction() throws IOException {
+        assertEquals(10, realItems().get("Ionian Boots of Lucidity").stats().cooldownReduction(), 0.001);
+    }
+
+    @Test
+    void dropsConsumablesWardsTrinketsAndJunglePets() throws IOException {
+        Map<String, Item> items = realItems();
+
+        for (String name : List.of("Health Potion", "Control Ward", "Stealth Ward", "Gustwalker Hatchling", "Cappa Juice")) {
+            assertFalse(items.containsKey(name), name + " must not be adviseable");
+        }
+    }
+
+    @Test
+    void marksLaneStartersButNotExpensiveLaneItems() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTags(items.get("Doran's Blade"), ItemTag.STARTER);
+        assertFalse(items.get("Atma's Reckoning").tags().contains(ItemTag.STARTER));
+    }
+
+    @Test
+    void keepsOnlyTheLowestIdWhenModeCopiesShareAName() throws IOException {
+        List<Item> thornmails = DataDragonParser.parseItems(fixture("ddragon-item-real.json")).stream()
+                .filter(i -> i.name().equals("Thornmail")).toList();
+
+        assertEquals(1, thornmails.size());
+        assertEquals(3075, thornmails.get(0).id());
+    }
+
+    @Test
+    void tagsEnchanterItemsFromHealAndShieldPower() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTags(items.get("Ardent Censer"), ItemTag.ENCHANTER);
+        assertTags(items.get("Staff of Flowing Water"), ItemTag.ENCHANTER);
+        assertFalse(items.get("Infinity Edge").tags().contains(ItemTag.ENCHANTER));
+    }
+
+    @Test
+    void tagsCleanseItemsFromRealDescriptions() throws IOException {
+        Map<String, Item> items = realItems();
+
+        assertTrue(items.containsKey("Quicksilver Sash"), "the cleanse component must stay in the catalogue");
+        assertTags(items.get("Quicksilver Sash"), ItemTag.CLEANSE, ItemTag.COMPONENT);
+        assertFalse(items.get("Infinity Edge").tags().contains(ItemTag.CLEANSE));
     }
 }

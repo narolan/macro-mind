@@ -1,0 +1,91 @@
+package com.macromind.domain.service;
+
+import com.macromind.domain.model.*;
+
+import java.util.List;
+import java.util.function.Predicate;
+
+/**
+ * "What fits my class" rules. These are the lowest-priority advice: they only fill the list when no threat rule
+ * has anything urgent to say, and they stop once the player's build is complete.
+ */
+final class CoreItemRules {
+
+    static final long CORE_MIN_SECONDS = 600;
+    static final int MAX_ITEM_SLOTS = 6;
+    static final long BOOTS_MIN_SECONDS = 180;
+
+    private final GameState gameState;
+    private final AdviceFactory factory;
+    private final Player me;
+
+    CoreItemRules(GameState gameState, AdviceFactory factory) {
+        this.gameState = gameState;
+        this.factory = factory;
+        this.me = gameState.activePlayer();
+    }
+
+    List<BuildAdvice> advise() {
+        List<BuildAdvice> advice = new java.util.ArrayList<>(defaultBoots());
+        if (gameState.enemies().isEmpty() || gameState.gameTimeInSeconds() < CORE_MIN_SECONDS || isBuildComplete()) {
+            return advice;
+        }
+        advice.addAll(factory.create(new AdviceRule(classFit(), reasoning(),
+                AdvicePriority.SITUATIONAL, categoryFor()), null));
+        return advice;
+    }
+
+    private boolean isBuildComplete() {
+        long finished = me.items().stream().filter(i -> !i.tags().contains(ItemTag.BOOTS)).count();
+        return finished >= MAX_ITEM_SLOTS - 1;
+    }
+
+    private List<BuildAdvice> defaultBoots() {
+        if (me.hasBoots() || gameState.gameTimeInSeconds() < BOOTS_MIN_SECONDS) {
+            return List.of();
+        }
+        return factory.create(new AdviceRule(i -> i.tags().contains(ItemTag.BOOTS) && fitsBootsFor(i),
+                "You have no boots yet. These suit your champion.",
+                AdvicePriority.SITUATIONAL, AdviceCategory.UTILITY), null);
+    }
+
+    // Marksmen want attack speed boots, magic users flat magic penetration; everyone else takes haste.
+    private boolean fitsBootsFor(Item boots) {
+        return switch (me.championClass()) {
+            case MARKSMAN -> boots.stats().attackSpeed() > 0;
+            case MAGE -> boots.tags().contains(ItemTag.MAGIC_PENETRATION_FLAT);
+            default -> boots.stats().cooldownReduction() > 0;
+        };
+    }
+
+    private Predicate<Item> classFit() {
+        // boots are advised by their own rules
+        return ((Predicate<Item>) i -> !i.tags().contains(ItemTag.BOOTS)).and(switch (me.championClass()) {
+            case MARKSMAN -> i -> i.stats().attackDamage() > 0 || i.stats().attackSpeed() > 0 || i.stats().criticalStrikeChance() > 0;
+            case MAGE -> i -> i.stats().abilityPower() > 0;
+            case TANK -> CoreItemRules::isTankItem;
+            case BRUISER -> i -> (i.stats().attackDamage() > 0 && i.stats().health() > 0) || i.stats().health() >= 300;
+            case ASSASSIN -> i -> me.dealsMagicDamage() ? i.stats().abilityPower() > 0 : i.stats().attackDamage() > 0;
+            case SUPPORT -> i -> i.tags().contains(ItemTag.ENCHANTER);
+        });
+    }
+
+    /** Durable items whose damage does not outweigh their resistances (so a damage item with some health is not a tank item). */
+    private static boolean isTankItem(Item item) {
+        ItemStats s = item.stats();
+        boolean durable = s.health() >= 300 || s.armor() > 0 || s.magicResist() > 0;
+        return durable && s.attackDamage() + s.abilityPower() <= s.armor() + s.magicResist();
+    }
+
+    private String reasoning() {
+        return "Nothing urgent to counter. This item fits a " + me.championClass().name().toLowerCase() + " build.";
+    }
+
+    private AdviceCategory categoryFor() {
+        return switch (me.championClass()) {
+            case MARKSMAN, MAGE, ASSASSIN -> AdviceCategory.OFFENSIVE;
+            case TANK -> AdviceCategory.DEFENSIVE;
+            case BRUISER, SUPPORT -> AdviceCategory.UTILITY;
+        };
+    }
+}

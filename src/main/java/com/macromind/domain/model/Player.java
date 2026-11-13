@@ -33,6 +33,27 @@ public record Player(
                 .sum();
     }
 
+    /** Mages deal magic damage; marksmen physical; hybrids follow their stronger offensive stat. */
+    public boolean dealsMagicDamage() {
+        return switch (championClass()) {
+            case MAGE -> true;
+            case ASSASSIN, BRUISER -> stats().abilityPower() > stats().attackDamage();
+            case MARKSMAN, TANK, SUPPORT -> false;
+        };
+    }
+
+    public boolean dealsPhysicalDamage() {
+        return switch (championClass()) {
+            case MARKSMAN -> true;
+            case ASSASSIN, BRUISER -> stats().attackDamage() >= stats().abilityPower();
+            case MAGE, TANK, SUPPORT -> false;
+        };
+    }
+
+    public boolean hasBoots() {
+        return items().stream().anyMatch(item -> item.tags().contains(ItemTag.BOOTS));
+    }
+
     public boolean hasArmorPenPercentage() {
         return items().stream().anyMatch(item -> item.tags().contains(ItemTag.ARMOR_PENETRATION_PERCENT));
     }
