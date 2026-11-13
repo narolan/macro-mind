@@ -1,0 +1,14 @@
+{
+  "_note": "SYNTHETIC fixture built from Riot's documented response shape, NOT recorded from a live game.",
+  "activePlayer": {
+    "championStats": {"abilityPower": 0, "armor": 90, "magicResist": 50, "maxHealth": 2100, "currentHealth": 2100, "attackDamage": 180, "healthRegenRate": 10, "lifeSteal": 0, "armorPenetrationFlat": 0, "magicPenetrationFlat": 0},
+    "currentGold": 1200, "level": 13, "riotId": "Me#EUW", "summonerName": "Me"
+  },
+  "allPlayers": [
+    {"championName": "Jinx", "isBot": false, "isDead": false, "items": [{"itemID": 3031, "displayName": "Infinity Edge", "price": 3450, "count": 1}], "level": 13, "position": "BOTTOM", "scores": {"kills": 5, "deaths": 1, "assists": 3, "creepScore": 120, "wardScore": 4}, "team": "ORDER", "riotId": "Me#EUW", "summonerName": "Me"},
+    {"championName": "Soraka", "isBot": false, "isDead": false, "items": [], "level": 12, "position": "UTILITY", "scores": {"kills": 0, "deaths": 2, "assists": 9, "creepScore": 20, "wardScore": 30}, "team": "CHAOS", "riotId": "E1#EUW", "summonerName": "E1"},
+    {"championName": "Malphite", "isBot": false, "isDead": true, "items": [{"itemID": 3075, "displayName": "Thornmail", "price": 2700, "count": 1}], "level": 13, "position": "TOP", "scores": {"kills": 2, "deaths": 3, "assists": 4, "creepScore": 130, "wardScore": 6}, "team": "CHAOS", "riotId": "E2#EUW", "summonerName": "E2"}
+  ],
+  "events": {"Events": [{"EventID": 0, "EventName": "GameStart", "EventTime": 0.05}]},
+  "gameData": {"gameMode": "CLASSIC", "gameTime": 912.5, "mapName": "Map11", "mapNumber": 11, "mapTerrain": "Default"}
+}
