@@ -72,4 +72,27 @@ class BuildAdvisorTest {
 
         assertTrue(advices.isEmpty());
     }
+
+    @Test
+    void marksAdviceEstimatedWhenEnemyStatsAreEstimated() {
+        Player active = player("Ahri", ChampionClass.MAGE, false, List.of(), AVERAGE_STATS);
+        Player estimatedEnemy = estimated(player("Tank", ChampionClass.TANK, true, List.of(), stats(80, 200, 100, 100)));
+
+        List<BuildAdvice> advices = new BuildAdvisor(game(active, List.of(estimatedEnemy)), List.of(MAGIC_PEN_ITEM))
+                .generateBuildAdvices();
+
+        assertFalse(advices.isEmpty());
+        assertTrue(advices.stream().allMatch(a -> a.confidence() == Confidence.ESTIMATED));
+    }
+
+    @Test
+    void marksAdviceExactWhenEnemyStatsAreExact() {
+        Player active = player("Ahri", ChampionClass.MAGE, false, List.of(), AVERAGE_STATS);
+        Player enemy = player("Tank", ChampionClass.TANK, true, List.of(), stats(80, 200, 100, 100));
+
+        List<BuildAdvice> advices = new BuildAdvisor(game(active, List.of(enemy)), List.of(MAGIC_PEN_ITEM))
+                .generateBuildAdvices();
+
+        assertTrue(advices.stream().allMatch(a -> a.confidence() == Confidence.EXACT));
+    }
 }

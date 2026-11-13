@@ -49,8 +49,12 @@ public record BuildAdvisor(
                 .filter(item -> !owned.contains(item))
                 .filter(rule.itemMatcher())
                 .map(item -> new BuildAdvice(item, rule.reasoning(), rule.priority(), rule.category(),
-                        target, gameState.gameTimeInSeconds()))
+                        target, confidenceFor(), gameState.gameTimeInSeconds()))
                 .toList();
+    }
+
+    private Confidence confidenceFor() {
+        return gameState.enemies().stream().anyMatch(Player::isEstimated) ? Confidence.ESTIMATED : Confidence.EXACT;
     }
 
     private static boolean offensive(Item item) {

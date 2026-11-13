@@ -6,6 +6,7 @@ public record BuildAdvice(
         AdvicePriority priority,
         AdviceCategory category,
         Player targetEnemy,
+        Confidence confidence,
         long timestamp
 ) {
 }

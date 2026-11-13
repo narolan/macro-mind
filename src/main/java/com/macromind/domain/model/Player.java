@@ -12,7 +12,8 @@ public record Player(
         PlayerStats stats, 
         Role role,
         KDA kda,
-        int totalGold
+        int totalGold,
+        boolean isEstimated
 ) {
 
     public boolean hasGrievousWoundsItem() {

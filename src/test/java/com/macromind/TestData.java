@@ -31,7 +31,12 @@ public final class TestData {
     public static Player player(String champion, ChampionClass championClass, boolean isEnemy,
                                 List<Item> items, PlayerStats stats) {
         return new Player(champion, champion, championClass, 13, isEnemy, items, stats,
-                Role.MID, new KDA(0, 0, 0), 0);
+                Role.MID, new KDA(0, 0, 0), 0, false);
+    }
+
+    public static Player estimated(Player p) {
+        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
+                p.stats(), p.role(), p.kda(), p.totalGold(), true);
     }
 
     public static PlayerStats stats(int armor, int magicResist, int attackDamage, int abilityPower) {
