@@ -4,10 +4,11 @@ import com.macromind.domain.model.*;
 
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
- * "What fits my class" rules. These are the lowest-priority advice: they only fill the list when no threat rule
- * has anything urgent to say, and they stop once the player's build is complete.
+ * Lowest-priority (SITUATIONAL) class-fit advice; the ranker places it below threat and composition advice.
+ * Stops once the build is complete.
  */
 final class CoreItemRules {
 
@@ -24,13 +25,13 @@ final class CoreItemRules {
     }
 
     List<BuildAdvice> advise() {
-        List<BuildAdvice> advice = new java.util.ArrayList<>(defaultBoots());
+        List<BuildAdvice> boots = defaultBoots();
         if (gameState.enemies().isEmpty() || gameState.gameTimeInSeconds() < AdviceThresholds.MID_GAME_SECONDS || isBuildComplete()) {
-            return advice;
+            return boots;
         }
-        advice.addAll(factory.create(new AdviceRule(classFit(), reasoning(),
-                AdvicePriority.SITUATIONAL, categoryFor()), null));
-        return advice;
+        List<BuildAdvice> classAdvice = factory.create(classFit(), reasoning(),
+                AdvicePriority.SITUATIONAL, categoryFor(), null);
+        return Stream.concat(boots.stream(), classAdvice.stream()).toList();
     }
 
     private boolean isBuildComplete() {
@@ -42,9 +43,9 @@ final class CoreItemRules {
         if (me.hasBoots() || gameState.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
             return List.of();
         }
-        return factory.create(new AdviceRule(i -> i.hasTag(ItemTag.BOOTS) && fitsBootsFor(i),
+        return factory.create(i -> i.hasTag(ItemTag.BOOTS) && fitsBootsFor(i),
                 "You have no boots yet. These suit your champion.",
-                AdvicePriority.SITUATIONAL, AdviceCategory.UTILITY), null);
+                AdvicePriority.SITUATIONAL, AdviceCategory.UTILITY, null);
     }
 
     // Marksmen want attack speed boots, magic users flat magic penetration; everyone else takes haste.

@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Merges advice for the same item and orders it by what the player should look at first. */
 final class AdviceRanker {
@@ -19,8 +20,8 @@ final class AdviceRanker {
      * player can already afford (most expensive first), then the rest (cheapest, i.e. closest, first).
      */
     static List<BuildAdvice> rank(List<BuildAdvice> advices, int gold) {
-        Map<String, List<BuildAdvice>> byItem = new LinkedHashMap<>();
-        advices.forEach(a -> byItem.computeIfAbsent(a.recommendedItem().name(), k -> new java.util.ArrayList<>()).add(a));
+        Map<String, List<BuildAdvice>> byItem = advices.stream().collect(
+                Collectors.groupingBy(a -> a.recommendedItem().name(), LinkedHashMap::new, Collectors.toList()));
         Comparator<Ranked> order = Comparator
                 .comparing((Ranked r) -> r.advice().priority())
                 .thenComparing(Comparator.comparingInt(Ranked::rulesWanting).reversed())

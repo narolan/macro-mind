@@ -4,6 +4,7 @@ import com.macromind.domain.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /** Rules driven by what the enemy team is made of (frontline, squishies, assassins, shields, crowd control). */
@@ -114,17 +115,20 @@ final class CompositionRules {
             return List.of();
         }
         List<Player> assassins = team.assassins();
-        Player fed = assassins.stream()
+        Optional<Player> fed = assassins.stream()
                 .filter(a -> a.kda().kills() - a.kda().deaths() >= FED_KILL_LEAD)
-                .findFirst().orElse(null);
-        if (fed == null && assassins.size() < TeamProfile.ASSASSINS_MIN) {
+                .findFirst();
+        if (fed.isPresent()) {
+            return factory.create(i -> i.hasTag(ItemTag.SPELL_SHIELD),
+                    "A fed assassin is on the enemy team. A spell shield blocks their opening ability.",
+                    AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE, fed.get());
+        }
+        if (assassins.size() < TeamProfile.ASSASSINS_MIN) {
             return List.of();
         }
         return factory.create(i -> i.hasTag(ItemTag.SPELL_SHIELD),
-                fed != null ? "A fed assassin is on the enemy team. A spell shield blocks their opening ability."
-                        : "Enemy team has several assassins. A spell shield blocks their opening ability.",
-                fed != null ? AdvicePriority.CRITICAL : AdvicePriority.RECOMMENDED,
-                AdviceCategory.DEFENSIVE, fed != null ? fed : assassins.get(0));
+                "Enemy team has several assassins. A spell shield blocks their opening ability.",
+                AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, assassins.get(0));
     }
 
     private List<BuildAdvice> tenacityVsCrowdControl() {
