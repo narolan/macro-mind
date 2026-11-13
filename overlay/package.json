@@ -6,7 +6,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/"
+    "test": "node --test ./test/*.js"
   },
   "devDependencies": {
     "electron": "^45.3.2"
