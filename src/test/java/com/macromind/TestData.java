@@ -1,5 +1,7 @@
 package com.macromind;
 
+import com.macromind.domain.model.AdvicePriority;
+import com.macromind.domain.model.BuildAdvice;
 import com.macromind.domain.model.ChampionClass;
 import com.macromind.domain.model.GameMode;
 import com.macromind.domain.model.GameState;
@@ -10,6 +12,7 @@ import com.macromind.domain.model.KDA;
 import com.macromind.domain.model.Player;
 import com.macromind.domain.model.PlayerStats;
 import com.macromind.domain.model.Role;
+import com.macromind.domain.service.BuildAdvisor;
 
 import java.util.List;
 import java.util.Set;
@@ -87,5 +90,21 @@ public final class TestData {
 
     public static GameState gameAt(long seconds, Player active, List<Player> enemies) {
         return new GameState(seconds, active, List.of(), enemies, GameMode.SUMMONERS_RIFT);
+    }
+
+    // advice
+
+    public static List<String> names(List<BuildAdvice> advice) {
+        return advice.stream().map(a -> a.recommendedItem().name()).toList();
+    }
+
+    /** Advice that is more urgent than the low-priority class-fit suggestions every game also gets. */
+    public static List<BuildAdvice> urgent(List<BuildAdvice> advice) {
+        return advice.stream().filter(a -> a.priority() != AdvicePriority.SITUATIONAL).toList();
+    }
+
+    /** Urgent advice for the active player against the enemies, at the given game time. */
+    public static List<BuildAdvice> advise(long seconds, Player active, List<Player> enemies, Item... items) {
+        return urgent(new BuildAdvisor(gameAt(seconds, active, enemies), List.of(items)).generateBuildAdvices());
     }
 }

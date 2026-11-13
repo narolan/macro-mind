@@ -34,28 +34,28 @@ class CoreItemRulesTest {
         return new BuildAdvisor(gameAt(900, me, QUIET_ENEMIES), List.of(items)).generateBuildAdvices();
     }
 
-    private static List<String> names(List<BuildAdvice> advice) {
-        return advice.stream().map(a -> a.recommendedItem().name()).sorted().toList();
+    private static List<String> sortedNames(List<BuildAdvice> advice) {
+        return names(advice).stream().sorted().toList();
     }
 
     @Test
     void marksmanGetsAttackItemsOnly() {
-        assertEquals(List.of("Infinity Edge", "Trinity Force"), names(advise(active(ChampionClass.MARKSMAN, 150, 0), CATALOGUE)));
+        assertEquals(List.of("Infinity Edge", "Trinity Force"), sortedNames(advise(active(ChampionClass.MARKSMAN, 150, 0), CATALOGUE)));
     }
 
     @Test
     void mageGetsAbilityPowerItemsOnly() {
-        assertEquals(List.of("Ardent Censer", "Rabadon's Deathcap"), names(advise(active(ChampionClass.MAGE, 0, 200), CATALOGUE)));
+        assertEquals(List.of("Ardent Censer", "Rabadon's Deathcap"), sortedNames(advise(active(ChampionClass.MAGE, 0, 200), CATALOGUE)));
     }
 
     @Test
     void tankGetsHealthAndResistItemsOnly() {
-        assertEquals(List.of("Sunfire Aegis", "Warmog's Armor"), names(advise(active(ChampionClass.TANK, 60, 0), CATALOGUE)));
+        assertEquals(List.of("Sunfire Aegis", "Warmog's Armor"), sortedNames(advise(active(ChampionClass.TANK, 60, 0), CATALOGUE)));
     }
 
     @Test
     void bruiserGetsDamageItemsWithHealthAndTanks() {
-        List<String> names = names(advise(active(ChampionClass.BRUISER, 150, 0), CATALOGUE));
+        List<String> names = sortedNames(advise(active(ChampionClass.BRUISER, 150, 0), CATALOGUE));
 
         assertTrue(names.contains("Trinity Force"));
         assertFalse(names.contains("Rabadon's Deathcap"));
@@ -63,13 +63,13 @@ class CoreItemRulesTest {
 
     @Test
     void assassinFollowsTheirDamageType() {
-        assertTrue(names(advise(active(ChampionClass.ASSASSIN, 250, 0), CATALOGUE)).contains("Infinity Edge"));
-        assertTrue(names(advise(active(ChampionClass.ASSASSIN, 0, 250), CATALOGUE)).contains("Rabadon's Deathcap"));
+        assertTrue(sortedNames(advise(active(ChampionClass.ASSASSIN, 250, 0), CATALOGUE)).contains("Infinity Edge"));
+        assertTrue(sortedNames(advise(active(ChampionClass.ASSASSIN, 0, 250), CATALOGUE)).contains("Rabadon's Deathcap"));
     }
 
     @Test
     void supportGetsEnchanterItemsOnly() {
-        assertEquals(List.of("Ardent Censer"), names(advise(active(ChampionClass.SUPPORT, 0, 60), CATALOGUE)));
+        assertEquals(List.of("Ardent Censer"), sortedNames(advise(active(ChampionClass.SUPPORT, 0, 60), CATALOGUE)));
     }
 
     @Test
@@ -82,7 +82,7 @@ class CoreItemRulesTest {
 
     @Test
     void neverAdvisesStartersOrComponentsAsCoreItems() {
-        List<String> names = names(advise(active(ChampionClass.BRUISER, 150, 0), DORANS, PHAGE));
+        List<String> names = sortedNames(advise(active(ChampionClass.BRUISER, 150, 0), DORANS, PHAGE));
 
         assertTrue(names.isEmpty(), names.toString());
     }
@@ -139,9 +139,9 @@ class CoreItemRulesTest {
         List<Player> mixed = List.of(player("Zed", ChampionClass.ASSASSIN, true, List.of(), stats(50, 50, 200, 0)),
                 player("Ahri", ChampionClass.MAGE, true, List.of(), stats(50, 50, 0, 200)));
 
-        assertEquals(List.of("Berserker's Greaves"), names(new BuildAdvisor(gameAt(600, active(ChampionClass.MARKSMAN, 150, 0), mixed),
+        assertEquals(List.of("Berserker's Greaves"), sortedNames(new BuildAdvisor(gameAt(600, active(ChampionClass.MARKSMAN, 150, 0), mixed),
                 List.of(asBoots, penBoots, IONIAN)).generateBuildAdvices()));
-        assertEquals(List.of("Sorcerer's Shoes"), names(new BuildAdvisor(gameAt(600, active(ChampionClass.MAGE, 0, 200), mixed),
+        assertEquals(List.of("Sorcerer's Shoes"), sortedNames(new BuildAdvisor(gameAt(600, active(ChampionClass.MAGE, 0, 200), mixed),
                 List.of(asBoots, penBoots, IONIAN)).generateBuildAdvices()));
     }
 

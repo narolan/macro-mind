@@ -8,7 +8,7 @@ import java.util.List;
 import static com.macromind.TestData.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-class BuildAdvisorBranchesTest {
+class ThreatRulesTest {
 
     private static final PlayerStats SQUISHY = new PlayerStats(30, 30, 1800, 1800, 100, 0, 0, 0, 10);
     private static final PlayerStats SQUISHY_AP = new PlayerStats(30, 30, 1800, 1800, 0, 200, 0, 0, 10);
@@ -28,15 +28,6 @@ class BuildAdvisorBranchesTest {
     private static List<BuildAdvice> advise(ChampionClass championClass, PlayerStats stats, Player enemy, Item... items) {
         Player active = player("Me", championClass, false, List.of(), stats);
         return urgent(new BuildAdvisor(game(active, List.of(enemy)), List.of(items)).generateBuildAdvices());
-    }
-
-    /** Threat rules are under test here; the low-priority class-fit advice has its own tests. */
-    private static List<BuildAdvice> urgent(List<BuildAdvice> advice) {
-        return advice.stream().filter(a -> a.priority() != AdvicePriority.SITUATIONAL).toList();
-    }
-
-    private static List<String> names(List<BuildAdvice> advice) {
-        return advice.stream().map(a -> a.recommendedItem().name()).toList();
     }
 
     @Test
