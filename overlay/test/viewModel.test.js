@@ -99,3 +99,28 @@ test('a merged row is estimated if any of its items is, and keeps the first targ
 test('a single-item row has no alternatives', () => {
   assert.deepEqual(toViewModel({ visible: true, advice: [advice('A', 'CRITICAL')] }).rows[0].alternatives, []);
 });
+
+test('builds an icon url from the patch version and item id', () => {
+  const vm = toViewModel({ visible: true, iconVersion: '16.22.1', advice: [advice('Thornmail', 'CRITICAL', { itemId: 3075 })] });
+  assert.equal(vm.rows[0].icon, 'https://ddragon.leagueoflegends.com/cdn/16.22.1/img/item/3075.png');
+});
+
+test('has no icon when the patch version or item id is missing or malformed', () => {
+  assert.equal(toViewModel({ visible: true, iconVersion: '', advice: [advice('A', 'CRITICAL', { itemId: 3075 })] }).rows[0].icon, null);
+  assert.equal(toViewModel({ visible: true, advice: [advice('A', 'CRITICAL', { itemId: 3075 })] }).rows[0].icon, null);
+  assert.equal(toViewModel({ visible: true, iconVersion: '16.22.1', advice: [advice('A', 'CRITICAL')] }).rows[0].icon, null);
+});
+
+test('refuses an icon version that is not a plain patch number, so the url cannot be redirected', () => {
+  for (const bad of ['../evil', 'x/y', '16.22.1/../../a', '16.22.1?x=1', 'http://evil']) {
+    const vm = toViewModel({ visible: true, iconVersion: bad, advice: [advice('A', 'CRITICAL', { itemId: 3075 })] });
+    assert.equal(vm.rows[0].icon, null, bad);
+  }
+});
+
+test('refuses a non-integer item id', () => {
+  for (const bad of ['3075', 3075.5, -1, '../1', null]) {
+    const vm = toViewModel({ visible: true, iconVersion: '16.22.1', advice: [advice('A', 'CRITICAL', { itemId: bad })] });
+    assert.equal(vm.rows[0].icon, null, String(bad));
+  }
+});

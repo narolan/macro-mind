@@ -50,4 +50,25 @@ class DataDragonClientTest {
 
         assertTrue(client.items().isEmpty());
     }
+
+    @Test
+    void exposesTheLoadedPatchVersionForIconUrls(@TempDir Path dir) throws IOException {
+        warmCache(dir, "16.9.1");
+        warmCache(dir, "16.10.1");
+        DataDragonClient client = new DataDragonClient(dir, UNREACHABLE);
+
+        assertEquals("", client.version());
+        client.load();
+
+        assertEquals("16.10.1", client.version());
+    }
+
+    @Test
+    void versionStaysEmptyWhenNothingLoaded(@TempDir Path dir) {
+        DataDragonClient client = new DataDragonClient(dir, UNREACHABLE);
+
+        client.load();
+
+        assertEquals("", client.version());
+    }
 }

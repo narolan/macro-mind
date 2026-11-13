@@ -36,6 +36,7 @@ public class DataDragonClient {
     private volatile Map<String, ChampionBaseStats> champions = Map.of();
     private volatile Map<String, ChampionClass> classes = Map.of();
     private volatile List<Item> items = List.of();
+    private volatile String loadedVersion = "";
 
     public DataDragonClient(Path cacheDir) {
         this(cacheDir, DEFAULT_BASE);
@@ -66,9 +67,15 @@ public class DataDragonClient {
             classes = DataDragonParser.parseChampionClasses(championJson);
             champions = parsedChampions;
             items = parsedItems;
+            loadedVersion = version.get();
         } catch (Exception e) {
             System.err.println("Data Dragon load failed, advice is DISABLED: " + e.getMessage());
         }
+    }
+
+    /** The patch the loaded data belongs to; empty until a load succeeds. Used to build item icon URLs. */
+    public String version() {
+        return loadedVersion;
     }
 
     public boolean isLoaded() {

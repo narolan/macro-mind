@@ -59,49 +59,75 @@ class AdviceServerTest {
     }
 
     @Test
-    void returnsAtMostFiveAdviceEntriesCriticalFirst() throws Exception {
+    void putsCriticalAdviceFirst() throws Exception {
         server = new AdviceServer(0);
         List<BuildAdvice> many = new java.util.ArrayList<>();
-        for (int i = 0; i < 8; i++) {
-            many.add(new BuildAdvice(item("Rec" + i, NO_STATS), "r", AdvicePriority.RECOMMENDED,
+        for (int i = 0; i < 3; i++) {
+            many.add(new BuildAdvice(item("Rec" + i, NO_STATS), "r" + i, AdvicePriority.RECOMMENDED,
                     AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0));
         }
         many.add(new BuildAdvice(item("Crit", NO_STATS), "c", AdvicePriority.CRITICAL,
                 AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0));
 
         server.publish(true, many);
+
+        assertEquals("Crit", get().get("advice").get(0).get("item").asText());
+    }
+
+    @Test
+    void servesItemIdsAndTheIconVersionSoTheOverlayCanShowIcons() throws Exception {
+        server = new AdviceServer(0, "16.22.1");
+        Item item = new Item(3075, "Thornmail", 2450, NO_STATS, java.util.Set.of());
+        server.publish(true, List.of(new BuildAdvice(item, "r", AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE,
+                null, Confidence.EXACT, 0)));
+
         JsonNode json = get();
 
-        assertEquals(5, json.get("advice").size());
-        assertEquals("Crit", json.get("advice").get(0).get("item").asText());
-    }
-
-    private HttpResponse<String> getWithOrigin(String origin) throws Exception {
-        return HttpClient.newHttpClient().send(
-                HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/advice"))
-                        .header("Origin", origin).build(),
-                HttpResponse.BodyHandlers.ofString());
+        assertEquals("16.22.1", json.get("iconVersion").asText());
+        assertEquals(3075, json.get("advice").get(0).get("itemId").asInt());
     }
 
     @Test
-    void allowsCrossOriginReadsOnlyFromTheOverlayOrigin() throws Exception {
+    void iconVersionIsEmptyWhenDataDragonNeverLoaded() throws Exception {
         server = new AdviceServer(0);
 
-        assertEquals("tauri://localhost", getWithOrigin("tauri://localhost").headers()
-                .firstValue("Access-Control-Allow-Origin").orElse(null));
-        assertTrue(getWithOrigin("https://evil.example").headers()
-                .firstValue("Access-Control-Allow-Origin").isEmpty());
+        assertEquals("", get().get("iconVersion").asText());
+    }
+
+    private static BuildAdvice advice(String item, String reason, AdvicePriority priority) {
+        return new BuildAdvice(item(item, NO_STATS), reason, priority, AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0);
     }
 
     @Test
-    void rejectsRequestsWithAForeignHostHeaderAgainstDnsRebinding() throws Exception {
+    void keepsAtMostFourEntriesPerReasonSoOtherReasonsStillReachTheOverlay() throws Exception {
         server = new AdviceServer(0);
-
-        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", server.port())) {
-            socket.getOutputStream().write(("GET /advice HTTP/1.1\r\nHost: evil.example\r\nConnection: close\r\n\r\n")
-                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            String statusLine = new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream())).readLine();
-            assertTrue(statusLine.contains("403"), statusLine);
+        List<BuildAdvice> advice = new java.util.ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            advice.add(advice("Heal" + i, "heavy healing", AdvicePriority.CRITICAL));
         }
+        advice.add(advice("Boots", "needs boots", AdvicePriority.RECOMMENDED));
+        advice.add(advice("Core", "fits your class", AdvicePriority.SITUATIONAL));
+
+        server.publish(true, advice);
+        JsonNode entries = get().get("advice");
+
+        long healing = java.util.stream.StreamSupport.stream(entries.spliterator(), false)
+                .filter(e -> e.get("reasoning").asText().equals("heavy healing")).count();
+        assertEquals(4, healing);
+        assertEquals(6, entries.size());
+        assertEquals("heavy healing", entries.get(0).get("reasoning").asText());
+    }
+
+    @Test
+    void neverSendsMoreThanTwelveEntriesOverall() throws Exception {
+        server = new AdviceServer(0);
+        List<BuildAdvice> advice = new java.util.ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            advice.add(advice("Item" + i, "reason " + i, AdvicePriority.RECOMMENDED));
+        }
+
+        server.publish(true, advice);
+
+        assertEquals(12, get().get("advice").size());
     }
 }

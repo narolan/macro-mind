@@ -16,16 +16,24 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Serves GET /advice on loopback only. The latest result is swapped in as an immutable value. */
 public class AdviceServer {
 
-    private static final int MAX_ADVICE = 5;
+    private static final int MAX_ADVICE = 12;
+    private static final int MAX_PER_REASON = 4;
     // The Tauri webview origin differs per platform (tauri://localhost, http(s)://tauri.localhost on Windows).
     private static final java.util.Set<String> OVERLAY_ORIGINS =
             java.util.Set.of("tauri://localhost", "http://tauri.localhost", "https://tauri.localhost");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpServer server;
-    private final AtomicReference<byte[]> latest = new AtomicReference<>(render(false, List.of()));
+    private final String iconVersion;
+    private final AtomicReference<byte[]> latest;
 
     public AdviceServer(int port) throws IOException {
+        this(port, "");
+    }
+
+    public AdviceServer(int port, String iconVersion) throws IOException {
+        this.iconVersion = iconVersion;
+        this.latest = new AtomicReference<>(render(false, List.of(), iconVersion));
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         server.createContext("/advice", exchange -> {
             // A foreign Host header means DNS rebinding: refuse before anything is read.
@@ -56,21 +64,30 @@ public class AdviceServer {
     }
 
     public void publish(boolean visible, List<BuildAdvice> advice) {
-        latest.set(render(visible, advice));
+        latest.set(render(visible, advice, iconVersion));
     }
 
     public void stop() {
         server.stop(0);
     }
 
-    private static byte[] render(boolean visible, List<BuildAdvice> advice) {
-        // Rules can match most of the catalogue; the overlay only has room for the most urgent few.
-        List<Map<String, Object>> items = advice.stream()
+    // Rules can match most of the catalogue. Cap each reason so one chatty rule cannot crowd the others out;
+    // the overlay merges entries that share a reason into a single card.
+    private static List<BuildAdvice> capped(List<BuildAdvice> advice) {
+        Map<String, Integer> perReason = new java.util.HashMap<>();
+        return advice.stream()
                 .sorted(java.util.Comparator.comparing(BuildAdvice::priority))
+                .filter(a -> perReason.merge(a.priority() + "|" + a.reasoning(), 1, Integer::sum) <= MAX_PER_REASON)
                 .limit(MAX_ADVICE)
+                .toList();
+    }
+
+    private static byte[] render(boolean visible, List<BuildAdvice> advice, String iconVersion) {
+        List<Map<String, Object>> items = capped(advice).stream()
                 .map(a -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("item", a.recommendedItem().name());
+            m.put("itemId", a.recommendedItem().id());
             m.put("reasoning", a.reasoning());
             m.put("priority", a.priority().name());
             m.put("category", a.category().name());
@@ -79,7 +96,7 @@ public class AdviceServer {
             return m;
         }).toList();
         try {
-            return MAPPER.writeValueAsString(Map.of("visible", visible, "advice", items)).getBytes(StandardCharsets.UTF_8);
+            return MAPPER.writeValueAsString(Map.of("visible", visible, "advice", items, "iconVersion", iconVersion)).getBytes(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

@@ -43,7 +43,7 @@ public final class Main {
                 dragon.items(), dragon::championClass);
         AtomicReference<String> lastError = new AtomicReference<>();
         LiveClientPoller poller = new LiveClientPoller(LIVE_CLIENT, mapper, e -> logOnce(lastError, "Live client response could not be used: " + e));
-        AdviceServer server = new AdviceServer(PORT);
+        AdviceServer server = new AdviceServer(PORT, dragon.version());
         System.out.println("MacroMind advice on http://127.0.0.1:" + PORT + "/advice");
 
         AtomicReference<Map<Integer, Long>> firstSeen = new AtomicReference<>(Map.of());

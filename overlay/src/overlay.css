@@ -1,12 +1,29 @@
 html, body { margin: 0; background: transparent; overflow: hidden; font: 13px/1.35 "Segoe UI", system-ui, sans-serif; }
-#advice { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+#advice { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 7px; }
 #advice:empty { display: none; }
-.row { padding: 8px 10px; border-radius: 6px; color: #f3f1ea; background: rgba(12, 14, 20, 0.34); border-left: 4px solid #6b7280; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8); }
-.row.critical { border-left-color: #ef4444; }
-.row.recommended { border-left-color: #f59e0b; }
-.row.situational { border-left-color: #60a5fa; }
-.name { font-weight: 700; font-size: 14px; }
-.badge { margin-left: 6px; font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); }
-.reason { opacity: 0.85; margin-top: 2px; }
-.target { opacity: 0.7; margin-top: 2px; font-size: 12px; }
-.alternatives { margin-top: 2px; font-size: 12px; font-style: italic; opacity: 0.8; }
+
+.row {
+  --accent: #6b7280;
+  position: relative;
+  padding: 8px 10px 8px 12px;
+  border-radius: 8px;
+  color: #f6f3ea;
+  background: linear-gradient(100deg, rgba(12, 14, 20, 0.40), rgba(12, 14, 20, 0.26));
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 14px -2px var(--glow, transparent), inset 3px 0 0 var(--accent);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8);
+  animation: arrive 260ms ease-out;
+}
+.row.critical { --accent: #ff5a5f; --glow: rgba(255, 90, 95, 0.55); }
+.row.recommended { --accent: #ffb347; --glow: rgba(255, 179, 71, 0.45); }
+.row.situational { --accent: #62b0ff; --glow: rgba(98, 176, 255, 0.40); }
+
+.name { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.2px; }
+.icon { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--accent); box-shadow: 0 0 8px -1px var(--glow); flex: none; }
+.badge { font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); }
+.reason { opacity: 0.88; margin-top: 3px; }
+.alternatives { margin-top: 3px; font-size: 12px; font-style: italic; opacity: 0.8; }
+.target { margin-top: 2px; font-size: 12px; opacity: 0.75; }
+
+@keyframes arrive { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .row { animation: none; } }
