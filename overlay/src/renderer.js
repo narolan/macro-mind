@@ -15,6 +15,7 @@ window.macromind.onViewModel((vm) => {
     const name = element('div', 'name', row.item);
     if (row.estimated) name.append(element('span', 'badge', 'est.'));
     li.append(name, element('div', 'reason', row.reasoning));
+    if (row.alternatives.length > 0) li.append(element('div', 'alternatives', `or ${row.alternatives.join(', ')}`));
     if (row.target) li.append(element('div', 'target', `vs ${row.target}`));
     return li;
   }));
