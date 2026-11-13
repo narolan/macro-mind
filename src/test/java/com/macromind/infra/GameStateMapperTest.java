@@ -91,4 +91,65 @@ class GameStateMapperTest {
         assertEquals(25, active.getFlatArmorPen());
         assertEquals(15, active.getFlatMagicPen());
     }
+
+    private static String realFixture() throws IOException {
+        return Files.readString(Path.of("src/test/resources/fixtures/allgamedata-real.json"));
+    }
+
+    @Test
+    void findsTheActivePlayerInARealPayloadWhereOnlyTheActiveNameCarriesATag() throws IOException {
+        GameState state = mapper.toGameState(realFixture());
+
+        assertEquals("Wukong", state.activePlayer().championName());
+        assertEquals(4, state.allies().size());
+        assertEquals(5, state.enemies().size());
+        assertTrue(state.enemies().stream().noneMatch(e -> e.championName().equals("Wukong")));
+    }
+
+    @Test
+    void readsExactStatsAndGoldForTheActivePlayerFromARealPayload() throws IOException {
+        Player active = mapper.toGameState(realFixture()).activePlayer();
+
+        assertEquals(139, active.stats().armor());
+        assertEquals(3623, active.stats().maxHealth());
+        assertEquals(18, active.stats().flatArmorPen());
+        assertEquals(4183, active.totalGold());
+        assertFalse(active.isEstimated());
+    }
+
+    @Test
+    void estimatesEnemyGoldFromCatalogueTotalsNotFromTheMisleadingPriceField() throws IOException {
+        GameStateMapper priced = new GameStateMapper(
+                new StatEstimator(name -> Optional.empty()),
+                List.of(new Item(3075, "Thornmail", 2450, THORNMAIL.stats(), java.util.Set.of()),
+                        new Item(6631, "Stridebreaker", 3300, THORNMAIL.stats(), java.util.Set.of()),
+                        new Item(3009, "Boots of Swiftness", 1000, THORNMAIL.stats(), java.util.Set.of())),
+                name -> ChampionClass.BRUISER);
+
+        Player warwick = priced.toGameState(realFixture()).enemies().stream()
+                .filter(p -> p.championName().equals("Warwick")).findFirst().orElseThrow();
+
+        assertEquals(2450 + 3300 + 1000, warwick.totalGold());
+    }
+
+    @Test
+    void marksTheDeadEnemiesFromARealPayload() throws IOException {
+        List<String> dead = mapper.toGameState(realFixture()).enemies().stream()
+                .filter(Player::isDead).map(Player::championName).sorted().toList();
+
+        assertEquals(List.of("Cassiopeia", "Zilean"), dead);
+    }
+
+    @Test
+    void stripsTheTagWhenMatchingNamesButNotWhenDifferentPlayersShareAName() {
+        String json = "{\"activePlayer\":{\"championStats\":{},\"summonerName\":\"Sam#EUW\"},"
+                + "\"allPlayers\":[{\"championName\":\"Jinx\",\"team\":\"ORDER\",\"summonerName\":\"Sam\",\"items\":[],\"level\":3},"
+                + "{\"championName\":\"Ahri\",\"team\":\"CHAOS\",\"summonerName\":\"Samuel\",\"items\":[],\"level\":3}],"
+                + "\"gameData\":{\"gameTime\":1.0}}";
+
+        GameState state = mapper.toGameState(json);
+
+        assertEquals("Jinx", state.activePlayer().championName());
+        assertEquals(1, state.enemies().size());
+    }
 }

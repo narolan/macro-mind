@@ -83,10 +83,8 @@ public class GameStateMapper {
         List<Item> items = items(p);
         String champion = p.path("championName").asText();
         int level = p.path("level").asInt(1);
-        int gold = 0;
-        for (JsonNode i : p.path("items")) {
-            gold += i.path("price").asInt() * Math.max(1, i.path("count").asInt(1));
-        }
+        // items[].price is the cost of the last purchase step (Trinity Force reads 183), so the catalogue total is used
+        int gold = items.stream().mapToInt(Item::goldValue).sum();
         return new Player(identity(p), champion, classOf.apply(champion), level, isEnemy, items,
                 estimator.estimate(champion, level, items), role(p), kda(p), gold, true,
                 p.path("isDead").asBoolean());
@@ -97,7 +95,7 @@ public class GameStateMapper {
         for (JsonNode i : player.path("items")) {
             int id = i.path("itemID").asInt();
             items.add(catalogue.getOrDefault(id, new Item(id, i.path("displayName").asText(),
-                    i.path("price").asInt(), new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), Set.of())));
+                    0, new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), Set.of())));
         }
         return List.copyOf(items);
     }
@@ -128,6 +126,8 @@ public class GameStateMapper {
             String value = p.path(field).asText();
             if (!value.isEmpty()) {
                 ids.add(value);
+                // activePlayer reports "Name#TAG" while allPlayers reports just "Name"
+                ids.add(value.contains("#") ? value.substring(0, value.indexOf('#')) : value);
             }
         }
         return ids;

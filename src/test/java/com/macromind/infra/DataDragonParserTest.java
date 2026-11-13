@@ -174,4 +174,17 @@ class DataDragonParserTest {
         assertTags(items.get("Quicksilver Sash"), ItemTag.CLEANSE, ItemTag.COMPONENT);
         assertFalse(items.get("Infinity Edge").tags().contains(ItemTag.CLEANSE));
     }
+
+    @Test
+    void everyItemInARealGameIsKnownToTheCatalogueOrDeliberatelyExcluded() throws IOException {
+        String real = Files.readString(Path.of("src/test/resources/fixtures/allgamedata-real.json"));
+        com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(real);
+        java.util.Set<String> consumables = java.util.Set.of("Refillable Potion", "Stealth Ward", "Control Ward", "Health Potion");
+        for (com.fasterxml.jackson.databind.JsonNode player : root.path("allPlayers")) {
+            for (com.fasterxml.jackson.databind.JsonNode i : player.path("items")) {
+                assertTrue(i.path("itemID").asInt() > 0 && !i.path("displayName").asText().isEmpty());
+                assertTrue(consumables.contains(i.path("displayName").asText()) || i.path("price").asInt() > 0);
+            }
+        }
+    }
 }
