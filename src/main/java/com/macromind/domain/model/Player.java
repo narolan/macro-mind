@@ -17,6 +17,9 @@ public record Player(
         boolean isDead
 ) {
 
+    private static final int HEAVY_REGEN_PER_SECOND = 100;
+    private static final int HEAVY_SUSTAIN_PERCENT = 15;
+
     public Player withGold(int gold) {
         return new Player(name, championName, championClass, level, isEnemy, items, stats, role, kda, gold, isEstimated, isDead);
     }
@@ -37,13 +40,13 @@ public record Player(
         return items.stream().anyMatch(item -> item.hasTag(ItemTag.GRIEVOUS_WOUNDS));
     }
 
-    public int getFlatArmorPen() {
+    public int totalFlatArmorPen() {
         return stats.flatArmorPen() + items.stream()
                 .mapToInt(item -> item.stats().flatArmorPen())
                 .sum();
     }
 
-    public int getFlatMagicPen() {
+    public int totalFlatMagicPen() {
         return stats.flatMagicPen() + items.stream()
                 .mapToInt(item -> item.stats().flatMagicPen())
                 .sum();
@@ -64,6 +67,12 @@ public record Player(
             case ASSASSIN, BRUISER -> stats.attackDamage() >= stats.abilityPower();
             case MAGE, TANK, SUPPORT -> false;
         };
+    }
+
+    /** Heavy sustain: strong health regen, or lifesteal plus omnivamp of at least 15%. */
+    public boolean hasHighSustainStats() {
+        return stats.healthRegen() > HEAVY_REGEN_PER_SECOND
+                || stats.lifesteal() + stats.omnivamp() >= HEAVY_SUSTAIN_PERCENT;
     }
 
     public boolean hasBoots() {

@@ -19,12 +19,14 @@ final class CompositionRules {
     private final AdviceFactory factory;
     private final TeamProfile team;
     private final Player me;
+    private final EnemyThreat threat;
 
     CompositionRules(GameState gameState, AdviceFactory factory) {
         this.gameState = gameState;
         this.factory = factory;
         this.team = TeamProfile.of(gameState);
         this.me = gameState.activePlayer();
+        this.threat = EnemyThreat.of(gameState);
     }
 
     List<BuildAdvice> advise() {
@@ -48,16 +50,16 @@ final class CompositionRules {
         if (me.hasBoots() || gameState.gameTimeInSeconds() < BOOTS_MIN_SECONDS) {
             return List.of();
         }
-        double adRatio = gameState.getEnemyAdRatio();
+        double adRatio = threat.adRatio();
         if (adRatio > HEAVY_AD_RATIO) {
             return rule(i -> i.hasTag(ItemTag.BOOTS) && i.stats().armor() > 0,
                     "Enemy team is mostly AD and you have no boots. Armor boots cut their damage.",
-                    AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, gameState.highestAdThreat());
+                    AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, threat.highestAdThreat());
         }
         if (adRatio < HEAVY_AP_RATIO) {
             return rule(i -> i.hasTag(ItemTag.BOOTS) && i.stats().magicResist() > 0,
                     "Enemy team is mostly AP and you have no boots. Magic resist boots cut their damage.",
-                    AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, gameState.highestApThreat());
+                    AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, threat.highestApThreat());
         }
         if (me.dealsMagicDamage()) {
             return rule(i -> i.hasTag(ItemTag.BOOTS) && i.hasTag(ItemTag.MAGIC_PENETRATION_FLAT),
@@ -117,7 +119,7 @@ final class CompositionRules {
     }
 
     private List<BuildAdvice> spellShieldVsAssassins() {
-        if (!gameState.isActivePlayerSquishy()) {
+        if (!Squishiness.of(me)) {
             return List.of();
         }
         List<Player> assassins = team.assassins();

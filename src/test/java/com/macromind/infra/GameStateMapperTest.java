@@ -86,8 +86,8 @@ class GameStateMapperTest {
 
         Player active = mapper.toGameState(json).activePlayer();
 
-        assertEquals(25, active.getFlatArmorPen());
-        assertEquals(15, active.getFlatMagicPen());
+        assertEquals(25, active.totalFlatArmorPen());
+        assertEquals(15, active.totalFlatMagicPen());
     }
 
     private static String realFixture() {

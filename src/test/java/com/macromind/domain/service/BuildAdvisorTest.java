@@ -48,7 +48,7 @@ class BuildAdvisorTest {
         assertFalse(advices.isEmpty());
         for (BuildAdvice advice : advices) {
             assertTrue(advice.reasoning().contains("AP"), advice.reasoning());
-            assertEquals(state.highestApThreat(), advice.targetEnemy());
+            assertEquals(EnemyThreat.of(state).highestApThreat(), advice.targetEnemy());
         }
     }
 

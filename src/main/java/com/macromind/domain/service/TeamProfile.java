@@ -17,6 +17,9 @@ record TeamProfile(List<Player> enemies) {
     private static final Set<String> SHIELDERS = Set.of("Janna", "Lulu", "Karma", "Orianna", "Sona", "Shen", "Yuumi",
             "Seraphine", "Rakan", "Ivern", "Malphite", "Sivir", "Galio", "Diana", "Lux");
 
+    private static final Set<String> HIGH_HEALING_CHAMPIONS =
+            Set.of("Aatrox", "Soraka", "Dr. Mundo", "Sylas", "Vladimir", "Swain", "Briar", "Warwick");
+
     static final int FRONTLINE_MIN = 2;
     static final int SQUISHY_MIN = 3;
     static final int SHIELDERS_MIN = 2;
@@ -30,6 +33,10 @@ record TeamProfile(List<Player> enemies) {
     long count(ChampionClass... classes) {
         Set<ChampionClass> wanted = Set.of(classes);
         return enemies.stream().filter(p -> wanted.contains(p.championClass())).count();
+    }
+
+    boolean hasHeavyHealing() {
+        return enemies.stream().anyMatch(p -> HIGH_HEALING_CHAMPIONS.contains(p.championName()) || p.hasHighSustainStats());
     }
 
     boolean hasFrontline() {

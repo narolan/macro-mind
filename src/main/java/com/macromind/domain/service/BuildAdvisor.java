@@ -14,26 +14,27 @@ public record BuildAdvisor(
     public List<BuildAdvice> generateBuildAdvices() {
         List<BuildAdvice> advices = new ArrayList<>();
         Player activePlayer = gameState.activePlayer();
-        if(gameState.hasEnemyWithHeavyHealing() && !activePlayer.hasGrievousWoundsItem()) {
+        EnemyThreat threat = EnemyThreat.of(gameState);
+        if(TeamProfile.of(gameState).hasHeavyHealing() && !activePlayer.hasGrievousWoundsItem()) {
             advices.addAll(generateAntiHealAdvice());
         }
-        if((gameState.getHighestArmorEnemy() - activePlayer.getFlatArmorPen()) > 150) {
+        if((gameState.highestEnemyArmor() - activePlayer.totalFlatArmorPen()) > 150) {
             advices.addAll(generateAntiArmorAdvice());
         }
-        if((gameState.getHighestMagicResistEnemy() - activePlayer.getFlatMagicPen()) > 150) {
+        if((gameState.highestEnemyMagicResist() - activePlayer.totalFlatMagicPen()) > 150) {
             advices.addAll(generateAntiMagicResistAdvice());
         }
-        if(gameState.getHighestHpEnemy() > 3500) {
-            if(gameState.getHighestHpEnemy() > 5000) {
+        if(gameState.highestEnemyMaxHealth() > 3500) {
+            if(gameState.highestEnemyMaxHealth() > 5000) {
                 advices.addAll(generatePercentHealthDamageAdvice(AdvicePriority.CRITICAL));
             } else {
                 advices.addAll(generatePercentHealthDamageAdvice(AdvicePriority.RECOMMENDED));
             }
         }
-        if(gameState.getEnemyAdRatio() > 0.7) {
+        if(threat.adRatio() > 0.7) {
             advices.addAll(generateHeavyAdEnemyThreatAdvice(activePlayer));
         }
-        if(gameState.getEnemyAdRatio() < 0.3) {
+        if(threat.adRatio() < 0.3) {
             advices.addAll(generateHeavyApEnemyThreatAdvice(activePlayer));
         }
         AdviceFactory factory = new AdviceFactory(gameState, possibleItems);
@@ -59,20 +60,20 @@ public record BuildAdvisor(
     }
 
     private List<BuildAdvice> generateHeavyAdEnemyThreatAdvice(Player activePlayer) {
-        return heavyThreatAdvice(activePlayer, AD_REASON, gameState.highestAdThreat(),
+        return heavyThreatAdvice(activePlayer, AD_REASON, EnemyThreat.of(gameState).highestAdThreat(),
                 item -> item.stats().armor() > 0,
                 "Guardian Angel", "Zhonya's Hourglass");
     }
 
     private List<BuildAdvice> generateHeavyApEnemyThreatAdvice(Player activePlayer) {
-        return heavyThreatAdvice(activePlayer, AP_REASON, gameState.highestApThreat(),
+        return heavyThreatAdvice(activePlayer, AP_REASON, EnemyThreat.of(gameState).highestApThreat(),
                 item -> item.stats().magicResist() > 0,
                 "Guardian Angel", "Banshee's Veil", "Zhonya's Hourglass");
     }
 
     private List<BuildAdvice> heavyThreatAdvice(Player activePlayer, String reasoning, Player target,
                                                 Predicate<Item> resist, String... assassinItems) {
-        boolean squishy = gameState.isActivePlayerSquishy();
+        boolean squishy = Squishiness.of(activePlayer);
         return switch (activePlayer.championClass()) {
             case MARKSMAN -> squishy
                     ? adviceFor(new AdviceRule(
@@ -112,7 +113,7 @@ public record BuildAdvisor(
 
     private List<BuildAdvice> generateAntiHealAdvice() {
         Player target = gameState.enemies().stream()
-                .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() >= 15)
+                .filter(enemy -> enemy.hasHighSustainStats())
                 .findFirst().orElse(null);
         return adviceFor(new AdviceRule(item -> item.hasAnyTag(ItemTag.GRIEVOUS_WOUNDS),
                 "Enemy team has heavy healing. Consider buying this item to apply Grievous Wounds.",
