@@ -19,7 +19,7 @@ public record BuildAdvisor(
         if((gameState.getHighestArmorEnemy() - activePlayer.getFlatArmorPen()) > 150) {
             advices.addAll(generateAntiArmorAdvice());
         }
-        if((gameState.getHighestMagicResistEnemy() - activePlayer.getFlatArmorPen()) > 150) {
+        if((gameState.getHighestMagicResistEnemy() - activePlayer.getFlatMagicPen()) > 150) {
             advices.addAll(generateAntiMagicResistAdvice());
         }
         if(gameState.getHighestHpEnemy() > 3500) {
@@ -174,10 +174,10 @@ public record BuildAdvisor(
                     .filter(item -> item.stats().health() > 0 || item.stats().magicResist() > 0)
                     .map(item -> new BuildAdvice(
                             item,
-                            "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
+                            "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
                             AdvicePriority.RECOMMENDED,
                             AdviceCategory.DEFENSIVE,
-                            gameState.highestAdThreat(),
+                            gameState.highestApThreat(),
                             gameState.gameTimeInSeconds()
                     ))
                     .toList();
@@ -188,10 +188,10 @@ public record BuildAdvisor(
                             .filter(item -> item.stats().health() > 0 || item.stats().attackDamage() > 0 || item.tags().contains(ItemTag.BURST_RESISTANCE))
                             .map(item -> new BuildAdvice(
                                     item,
-                                    "Enemy team has heavy AD threat. Consider buying this item to survive their damage.",
+                                    "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
                                     AdvicePriority.RECOMMENDED,
                                     AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
+                                    gameState.highestApThreat(),
                                     gameState.gameTimeInSeconds()
                             ))
                             .toList();
@@ -207,7 +207,7 @@ public record BuildAdvisor(
                                     "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
                                     AdvicePriority.RECOMMENDED,
                                     AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
+                                    gameState.highestApThreat(),
                                     gameState.gameTimeInSeconds()
                             ))
                             .toList();
@@ -219,7 +219,7 @@ public record BuildAdvisor(
                                     "Enemy team has heavy AP threat. Consider buying this item to survive their damage.",
                                     AdvicePriority.RECOMMENDED,
                                     AdviceCategory.DEFENSIVE,
-                                    gameState.highestAdThreat(),
+                                    gameState.highestApThreat(),
                                     gameState.gameTimeInSeconds()
                             ))
                             .toList();

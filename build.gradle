@@ -1,8 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '4.1.1'
-	id 'io.spring.dependency-management' version '1.1.7'
-	id 'org.graalvm.buildtools.native' version '1.1.8'
+	id 'application'
 }
 
 group = 'com.macromind'
@@ -14,8 +12,8 @@ java {
 	}
 }
 
-graalvmNative {
-	toolchainDetection = false
+application {
+	mainClass = 'com.macromind.Main'
 }
 
 repositories {
@@ -23,10 +21,7 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-	implementation 'org.springframework.boot:spring-boot-starter-websocket'
-	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-	testImplementation 'org.springframework.boot:spring-boot-starter-websocket-test'
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

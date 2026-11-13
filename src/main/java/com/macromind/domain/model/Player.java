@@ -26,6 +26,12 @@ public record Player(
                 .sum();
     }
 
+    public int getFlatMagicPen() {
+        return items().stream()
+                .mapToInt(item -> item.stats().flatMagicPen())
+                .sum();
+    }
+
     public boolean hasArmorPenPercentage() {
         return items().stream().anyMatch(item -> item.tags().contains(ItemTag.ARMOR_PENETRATION_PERCENT));
     }
