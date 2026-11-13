@@ -1,5 +1,6 @@
 package com.macromind.infra;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.macromind.domain.model.ChampionBaseStats;
 import com.macromind.domain.model.ChampionClass;
@@ -10,15 +11,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /** Loads static Riot Data Dragon data, cached on disk per patch; falls back to the newest cache when offline. */
 public class DataDragonClient {
@@ -26,130 +23,103 @@ public class DataDragonClient {
     private static final String DEFAULT_BASE = "https://ddragon.leagueoflegends.com";
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
-    private static final Pattern VERSION = Pattern.compile("\\d+(\\.\\d+)+");
-    private static final String CHAMPIONS = "championFull.json";
-    private static final String ITEMS = "item.json";
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    /** Everything one successful load produced. Swapped in as a whole, so readers never see a half-updated mix. */
+    private record Catalogue(String version, Map<String, ChampionBaseStats> champions,
+                             Map<String, ChampionClass> classes, List<Item> items) {
+        static final Catalogue EMPTY = new Catalogue("", Map.of(), Map.of(), List.of());
+    }
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
-    private final Path cacheDir;
+    private final DataDragonCache cache;
     private final String base;
-    private volatile Map<String, ChampionBaseStats> champions = Map.of();
-    private volatile Map<String, ChampionClass> classes = Map.of();
-    private volatile List<Item> items = List.of();
-    private volatile String loadedVersion = "";
+    private volatile Catalogue catalogue = Catalogue.EMPTY;
 
     public DataDragonClient(Path cacheDir) {
         this(cacheDir, DEFAULT_BASE);
     }
 
     public DataDragonClient(Path cacheDir, String baseUrl) {
-        this.cacheDir = cacheDir;
+        this.cache = new DataDragonCache(cacheDir);
         this.base = baseUrl;
     }
 
     /** Never throws. Without network it uses the newest cached patch; with neither, advice stays disabled. */
     public void load() {
-        Optional<String> version = latestVersion();
-        if (version.isEmpty()) {
+        Optional<String> latest = latestVersion();
+        if (latest.isEmpty()) {
             System.err.println("Data Dragon unreachable and no cache found: advice is DISABLED until it loads");
             return;
         }
+        String version = latest.get();
         try {
-            String championJson = cached(version.get(), CHAMPIONS);
-            String itemJson = cached(version.get(), ITEMS);
-            Map<String, ChampionBaseStats> parsedChampions = DataDragonParser.parseChampions(championJson);
-            List<Item> parsedItems = DataDragonParser.parseItems(itemJson);
-            if (parsedChampions.isEmpty() || parsedItems.isEmpty()) {
-                discard(version.get());
-                System.err.println("Data Dragon data for " + version.get() + " was unusable and was discarded");
-                return;
-            }
-            classes = DataDragonParser.parseChampionClasses(championJson);
-            champions = parsedChampions;
-            items = parsedItems;
-            loadedVersion = version.get();
-        } catch (Exception e) {
+            loadVersion(version);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (IOException | RuntimeException e) {
             System.err.println("Data Dragon load failed, advice is DISABLED: " + e.getMessage());
         }
     }
 
+    private void loadVersion(String version) throws IOException, InterruptedException {
+        String championJson = fileContent(version, DataDragonCache.CHAMPIONS);
+        String itemJson = fileContent(version, DataDragonCache.ITEMS);
+        Map<String, ChampionBaseStats> champions = DataDragonParser.parseChampions(championJson);
+        List<Item> items = DataDragonParser.parseItems(itemJson);
+        if (champions.isEmpty() || items.isEmpty()) {
+            cache.discard(version);
+            System.err.println("Data Dragon data for " + version + " was unusable and was discarded");
+            return;
+        }
+        catalogue = new Catalogue(version, champions, DataDragonParser.parseChampionClasses(championJson), items);
+    }
+
     /** The patch the loaded data belongs to; empty until a load succeeds. Used to build item icon URLs. */
     public String version() {
-        return loadedVersion;
+        return catalogue.version();
     }
 
     public boolean isLoaded() {
-        return !items.isEmpty();
+        return !catalogue.items().isEmpty();
     }
 
     public Optional<ChampionBaseStats> championBaseStats(String championName) {
-        return Optional.ofNullable(champions.get(championName));
+        return Optional.ofNullable(catalogue.champions().get(championName));
     }
 
     /** Unknown champions default to BRUISER, the most neutral class for the rules. */
     public ChampionClass championClass(String championName) {
-        return classes.getOrDefault(championName, ChampionClass.BRUISER);
+        return catalogue.classes().getOrDefault(championName, ChampionClass.BRUISER);
     }
 
     public List<Item> items() {
-        return items;
+        return catalogue.items();
     }
 
     private Optional<String> latestVersion() {
         try {
-            String version = new ObjectMapper().readTree(fetch(base + "/api/versions.json")).get(0).asText();
-            if (VERSION.matcher(version).matches()) {
+            JsonNode versions = JSON.readTree(fetch(base + "/api/versions.json"));
+            String version = versions.path(0).asText();
+            if (DataDragonCache.isVersion(version)) {
                 return Optional.of(version);
             }
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (IOException | RuntimeException e) {
             System.err.println("Data Dragon version lookup failed: " + e.getMessage());
         }
-        return newestCachedVersion();
+        return cache.newestVersion();
     }
 
-    private Optional<String> newestCachedVersion() {
-        if (!Files.isDirectory(cacheDir)) {
-            return Optional.empty();
-        }
-        try (Stream<Path> files = Files.list(cacheDir)) {
-            return files.map(p -> p.getFileName().toString())
-                    .filter(n -> n.endsWith("-" + ITEMS))
-                    .map(n -> n.substring(0, n.length() - ITEMS.length() - 1))
-                    .filter(v -> VERSION.matcher(v).matches())
-                    .filter(v -> Files.exists(cacheDir.resolve(v + "-" + CHAMPIONS)))
-                    .max(DataDragonClient::compareVersions);
-        } catch (IOException e) {
-            return Optional.empty();
-        }
-    }
-
-    private static int compareVersions(String a, String b) {
-        int[] left = Stream.of(a.split("\\.")).mapToInt(Integer::parseInt).toArray();
-        int[] right = Stream.of(b.split("\\.")).mapToInt(Integer::parseInt).toArray();
-        return java.util.Arrays.compare(left, right);
-    }
-
-    private String cached(String version, String file) throws IOException, InterruptedException {
-        Path path = cacheDir.resolve(version + "-" + file);
-        if (Files.exists(path)) {
-            return Files.readString(path);
+    private String fileContent(String version, String file) throws IOException, InterruptedException {
+        Optional<String> cached = cache.read(version, file);
+        if (cached.isPresent()) {
+            return cached.get();
         }
         String body = fetch(base + "/cdn/" + version + "/data/en_US/" + file);
-        Files.createDirectories(cacheDir);
-        Path temp = Files.createTempFile(cacheDir, file, ".tmp");
-        Files.writeString(temp, body);
-        Files.move(temp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        cache.write(version, file, body);
         return body;
-    }
-
-    private void discard(String version) {
-        for (String file : List.of(CHAMPIONS, ITEMS)) {
-            try {
-                Files.deleteIfExists(cacheDir.resolve(version + "-" + file));
-            } catch (IOException ignored) {
-                // best effort: a stuck file is re-validated on the next load
-            }
-        }
     }
 
     private String fetch(String url) throws IOException, InterruptedException {
