@@ -1,12 +1,10 @@
 package com.macromind.infra;
 
+import com.macromind.Fixtures;
 import com.macromind.domain.model.*;
 import com.macromind.domain.service.StatEstimator;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,12 +22,12 @@ class GameStateMapperTest {
                     new Item(3031, "Infinity Edge", 3450, INFINITY_EDGE.stats(), java.util.Set.of())),
             name -> ChampionClass.MARKSMAN);
 
-    private static String fixture() throws IOException {
-        return Files.readString(Path.of("src/test/resources/fixtures/allgamedata.json"));
+    private static String fixture() {
+        return Fixtures.read(Fixtures.ALL_GAME_DATA);
     }
 
     @Test
-    void mapsFixtureToGameStateWithExactActiveStatsAndEstimatedEnemies() throws IOException {
+    void mapsFixtureToGameStateWithExactActiveStatsAndEstimatedEnemies() {
         GameState state = mapper.toGameState(fixture());
 
         assertEquals(912, state.gameTimeInSeconds());
@@ -42,7 +40,7 @@ class GameStateMapperTest {
     }
 
     @Test
-    void estimatesEnemyGoldFromItemPricesAndStatsFromItems() throws IOException {
+    void estimatesEnemyGoldFromItemPricesAndStatsFromItems() {
         GameState state = mapper.toGameState(fixture());
 
         Player malphite = state.enemies().stream().filter(p -> p.championName().equals("Malphite")).findFirst().orElseThrow();
@@ -52,7 +50,7 @@ class GameStateMapperTest {
     }
 
     @Test
-    void mapsActivePlayerKda() throws IOException {
+    void mapsActivePlayerKda() {
         GameState state = mapper.toGameState(fixture());
 
         assertEquals(new KDA(5, 1, 3), state.activePlayer().kda());
@@ -92,12 +90,12 @@ class GameStateMapperTest {
         assertEquals(15, active.getFlatMagicPen());
     }
 
-    private static String realFixture() throws IOException {
-        return Files.readString(Path.of("src/test/resources/fixtures/allgamedata-real.json"));
+    private static String realFixture() {
+        return Fixtures.read(Fixtures.ALL_GAME_DATA_REAL);
     }
 
     @Test
-    void findsTheActivePlayerInARealPayloadWhereOnlyTheActiveNameCarriesATag() throws IOException {
+    void findsTheActivePlayerInARealPayloadWhereOnlyTheActiveNameCarriesATag() {
         GameState state = mapper.toGameState(realFixture());
 
         assertEquals("Wukong", state.activePlayer().championName());
@@ -107,7 +105,7 @@ class GameStateMapperTest {
     }
 
     @Test
-    void readsExactStatsAndGoldForTheActivePlayerFromARealPayload() throws IOException {
+    void readsExactStatsAndGoldForTheActivePlayerFromARealPayload() {
         Player active = mapper.toGameState(realFixture()).activePlayer();
 
         assertEquals(139, active.stats().armor());
@@ -118,7 +116,7 @@ class GameStateMapperTest {
     }
 
     @Test
-    void estimatesEnemyGoldFromCatalogueTotalsNotFromTheMisleadingPriceField() throws IOException {
+    void estimatesEnemyGoldFromCatalogueTotalsNotFromTheMisleadingPriceField() {
         GameStateMapper priced = new GameStateMapper(
                 new StatEstimator(name -> Optional.empty()),
                 List.of(new Item(3075, "Thornmail", 2450, THORNMAIL.stats(), java.util.Set.of()),
@@ -133,7 +131,7 @@ class GameStateMapperTest {
     }
 
     @Test
-    void marksTheDeadEnemiesFromARealPayload() throws IOException {
+    void marksTheDeadEnemiesFromARealPayload() {
         List<String> dead = mapper.toGameState(realFixture()).enemies().stream()
                 .filter(Player::isDead).map(Player::championName).sorted().toList();
 

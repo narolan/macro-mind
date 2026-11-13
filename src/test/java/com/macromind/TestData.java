@@ -1,54 +1,51 @@
 package com.macromind;
 
-import com.macromind.domain.model.*;
+import com.macromind.domain.model.ChampionClass;
+import com.macromind.domain.model.GameMode;
+import com.macromind.domain.model.GameState;
+import com.macromind.domain.model.Item;
+import com.macromind.domain.model.ItemStats;
+import com.macromind.domain.model.ItemTag;
+import com.macromind.domain.model.KDA;
+import com.macromind.domain.model.Player;
+import com.macromind.domain.model.PlayerStats;
+import com.macromind.domain.model.Role;
 
 import java.util.List;
 import java.util.Set;
 
+/** Small builders for domain objects, shared by the unit tests. */
 public final class TestData {
+
+    private static final int DEFAULT_ITEM_GOLD = 1000;
+    private static final int DEFAULT_LEVEL = 13;
+    private static final long DEFAULT_GAME_SECONDS = 600;
+
+    public static final ItemStats NO_STATS = ItemStats.NONE;
+    public static final PlayerStats AVERAGE_STATS = new PlayerStats(80, 50, 2000, 2000, 100, 0, 0, 0, 10);
 
     private TestData() {}
 
-    public static final ItemStats NO_STATS = new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    public static final PlayerStats AVERAGE_STATS = new PlayerStats(80, 50, 2000, 2000, 100, 0, 0, 0, 10);
+    // items
 
     public static Item item(String name, ItemStats stats, ItemTag... tags) {
-        return new Item(name.hashCode(), name, 1000, stats, Set.of(tags));
-    }
-
-    public static ItemStats withFlatArmorPen(int pen) {
-        return new ItemStats(0, 0, 0, 0, 0, 0, pen, 0, 0, 0, 0, 0);
-    }
-
-    public static ItemStats withArmor(int armor) {
-        return new ItemStats(0, 0, armor, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
-    public static ItemStats withMagicResist(int mr) {
-        return new ItemStats(0, 0, 0, mr, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
-    public static Player player(String champion, ChampionClass championClass, boolean isEnemy,
-                                List<Item> items, PlayerStats stats) {
-        return new Player(champion, champion, championClass, 13, isEnemy, items, stats,
-                Role.MID, new KDA(0, 0, 0), 0, false, false);
-    }
-
-    public static Player estimated(Player p) {
-        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
-                p.stats(), p.role(), p.kda(), p.totalGold(), true, p.isDead());
-    }
-
-    public static PlayerStats stats(int armor, int magicResist, int attackDamage, int abilityPower) {
-        return new PlayerStats(armor, magicResist, 2000, 2000, attackDamage, abilityPower, 0, 0, 10);
-    }
-
-    public static GameState game(Player active, List<Player> enemies) {
-        return new GameState(600, active, List.of(), enemies, GameMode.SUMMONERS_RIFT);
+        return itemWith(name, DEFAULT_ITEM_GOLD, stats, tags);
     }
 
     public static Item itemWith(String name, int gold, ItemStats stats, ItemTag... tags) {
         return new Item(name.hashCode(), name, gold, stats, Set.of(tags));
+    }
+
+    public static ItemStats withFlatArmorPen(int pen) {
+        return ItemStats.NONE.withFlatArmorPen(pen);
+    }
+
+    public static ItemStats withArmor(int armor) {
+        return ItemStats.NONE.withArmor(armor);
+    }
+
+    public static ItemStats withMagicResist(int mr) {
+        return ItemStats.NONE.withMagicResist(mr);
     }
 
     /** Item stats with only the fields the rule tests care about. */
@@ -58,17 +55,37 @@ public final class TestData {
                 attackSpeed, abilityHaste, 0, 0);
     }
 
+    // players
+
+    public static PlayerStats stats(int armor, int magicResist, int attackDamage, int abilityPower) {
+        return new PlayerStats(armor, magicResist, 2000, 2000, attackDamage, abilityPower, 0, 0, 10);
+    }
+
+    public static Player player(String champion, ChampionClass championClass, boolean isEnemy,
+                                List<Item> items, PlayerStats stats) {
+        return new Player(champion, champion, championClass, DEFAULT_LEVEL, isEnemy, items, stats,
+                Role.MID, new KDA(0, 0, 0), 0, false, false);
+    }
+
+    public static Player estimated(Player p) {
+        return p.asEstimated();
+    }
+
     public static Player withGold(Player p, int gold) {
-        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
-                p.stats(), p.role(), p.kda(), gold, p.isEstimated(), p.isDead());
+        return p.withGold(gold);
+    }
+
+    public static Player withKda(Player p, int kills, int deaths, int assists) {
+        return p.withKda(new KDA(kills, deaths, assists));
+    }
+
+    // games
+
+    public static GameState game(Player active, List<Player> enemies) {
+        return gameAt(DEFAULT_GAME_SECONDS, active, enemies);
     }
 
     public static GameState gameAt(long seconds, Player active, List<Player> enemies) {
         return new GameState(seconds, active, List.of(), enemies, GameMode.SUMMONERS_RIFT);
-    }
-
-    public static Player withKda(Player p, int kills, int deaths, int assists) {
-        return new Player(p.name(), p.championName(), p.championClass(), p.level(), p.isEnemy(), p.items(),
-                p.stats(), p.role(), new KDA(kills, deaths, assists), p.totalGold(), p.isEstimated(), p.isDead());
     }
 }

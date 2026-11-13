@@ -95,7 +95,7 @@ public class GameStateMapper {
         for (JsonNode i : player.path("items")) {
             int id = i.path("itemID").asInt();
             items.add(catalogue.getOrDefault(id, new Item(id, i.path("displayName").asText(),
-                    0, new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), Set.of())));
+                    0, ItemStats.NONE, Set.of())));
         }
         return List.copyOf(items);
     }

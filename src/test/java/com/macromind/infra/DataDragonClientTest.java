@@ -1,5 +1,6 @@
 package com.macromind.infra;
 
+import com.macromind.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,8 +16,8 @@ class DataDragonClientTest {
 
     private static void warmCache(Path dir, String version) throws IOException {
         Files.createDirectories(dir);
-        Files.copy(Path.of("src/test/resources/fixtures/ddragon-champion.json"), dir.resolve(version + "-championFull.json"));
-        Files.copy(Path.of("src/test/resources/fixtures/ddragon-item.json"), dir.resolve(version + "-item.json"));
+        Files.copy(Fixtures.path(Fixtures.DDRAGON_CHAMPIONS), dir.resolve(version + "-championFull.json"));
+        Files.copy(Fixtures.path(Fixtures.DDRAGON_ITEMS), dir.resolve(version + "-item.json"));
     }
 
     @Test

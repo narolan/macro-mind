@@ -1,5 +1,6 @@
 package com.macromind.infra;
 
+import com.macromind.Fixtures;
 import com.macromind.domain.model.ChampionBaseStats;
 import com.macromind.domain.model.ChampionClass;
 import com.macromind.domain.service.StatEstimator;
@@ -11,8 +12,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -61,7 +60,7 @@ class LiveClientPollerTest {
 
     @Test
     void pollMapsAValidResponseToGameState() throws IOException {
-        String url = serve(200, Files.readString(Path.of("src/test/resources/fixtures/allgamedata.json")));
+        String url = serve(200, Fixtures.read(Fixtures.ALL_GAME_DATA));
 
         var state = new LiveClientPoller(url, MAPPER, e -> fail(e)).poll();
 

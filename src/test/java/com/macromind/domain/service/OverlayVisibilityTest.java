@@ -18,10 +18,8 @@ class OverlayVisibilityTest {
     }
 
     private static GameState state(boolean dead, long time) {
-        Player me = player("Me", ChampionClass.MAGE, false, List.of(), AVERAGE_STATS);
-        Player active = new Player(me.name(), me.championName(), me.championClass(), 1, false, List.of(),
-                me.stats(), me.role(), me.kda(), 0, false, dead);
-        return new GameState(time, active, List.of(), List.of(), GameMode.SUMMONERS_RIFT);
+        Player active = player("Me", ChampionClass.MAGE, false, List.of(), AVERAGE_STATS).withDead(dead);
+        return gameAt(time, active, List.of());
     }
 
     @Test

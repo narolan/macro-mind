@@ -9,13 +9,29 @@ public record Player(
         int level,
         boolean isEnemy,
         List<Item> items,
-        PlayerStats stats, 
+        PlayerStats stats,
         Role role,
         KDA kda,
         int totalGold,
         boolean isEstimated,
         boolean isDead
 ) {
+
+    public Player withGold(int gold) {
+        return new Player(name, championName, championClass, level, isEnemy, items, stats, role, kda, gold, isEstimated, isDead);
+    }
+
+    public Player withKda(KDA newKda) {
+        return new Player(name, championName, championClass, level, isEnemy, items, stats, role, newKda, totalGold, isEstimated, isDead);
+    }
+
+    public Player asEstimated() {
+        return new Player(name, championName, championClass, level, isEnemy, items, stats, role, kda, totalGold, true, isDead);
+    }
+
+    public Player withDead(boolean dead) {
+        return new Player(name, championName, championClass, level, isEnemy, items, stats, role, kda, totalGold, isEstimated, dead);
+    }
 
     public boolean hasGrievousWoundsItem() {
         return items().stream().anyMatch(item -> item.tags().contains(ItemTag.GRIEVOUS_WOUNDS));

@@ -1,13 +1,11 @@
 package com.macromind.infra;
 
+import com.macromind.Fixtures;
 import com.macromind.domain.model.ChampionBaseStats;
 import com.macromind.domain.model.Item;
 import com.macromind.domain.model.ItemTag;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -15,20 +13,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DataDragonParserTest {
 
-    private static String fixture(String name) throws IOException {
-        return Files.readString(Path.of("src/test/resources/fixtures/" + name));
+    private static String fixture(String name) {
+        return Fixtures.read(name);
     }
 
     @Test
-    void parsesChampionBaseStats() throws IOException {
-        Map<String, ChampionBaseStats> champions = DataDragonParser.parseChampions(fixture("ddragon-champion.json"));
+    void parsesChampionBaseStats() {
+        Map<String, ChampionBaseStats> champions = DataDragonParser.parseChampions(fixture(Fixtures.DDRAGON_CHAMPIONS));
 
         assertEquals(new ChampionBaseStats(600, 100, 30, 4, 32, 2, 60, 3), champions.get("Malphite"));
     }
 
     @Test
-    void parsesItemStatsAndPrice() throws IOException {
-        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+    void parsesItemStatsAndPrice() {
+        List<Item> items = DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS));
 
         Item thornmail = items.stream().filter(i -> i.name().equals("Thornmail")).findFirst().orElseThrow();
         assertEquals(3075, thornmail.id());
@@ -38,8 +36,8 @@ class DataDragonParserTest {
     }
 
     @Test
-    void derivesGrievousWoundsTagFromDescription() throws IOException {
-        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+    void derivesGrievousWoundsTagFromDescription() {
+        List<Item> items = DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS));
 
         Item morello = items.stream().filter(i -> i.name().equals("Morellonomicon")).findFirst().orElseThrow();
         assertTrue(morello.tags().contains(ItemTag.GRIEVOUS_WOUNDS));
@@ -52,22 +50,22 @@ class DataDragonParserTest {
     }
 
     @Test
-    void mapsFirstDataDragonTagToChampionClass() throws IOException {
-        var classes = DataDragonParser.parseChampionClasses(fixture("ddragon-champion.json"));
+    void mapsFirstDataDragonTagToChampionClass() {
+        var classes = DataDragonParser.parseChampionClasses(fixture(Fixtures.DDRAGON_CHAMPIONS));
 
         assertEquals(com.macromind.domain.model.ChampionClass.TANK, classes.get("Malphite"));
     }
 
     @Test
-    void keepsOnlyPurchasableSummonersRiftItems() throws IOException {
-        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+    void keepsOnlyPurchasableSummonersRiftItems() {
+        List<Item> items = DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS));
 
         assertEquals(java.util.Set.of(3075, 3146, 3165), items.stream().map(Item::id).collect(java.util.stream.Collectors.toSet()));
     }
 
     @Test
-    void keysChampionsByDisplayNameAsWellAsId() throws IOException {
-        String json = fixture("ddragon-champion.json");
+    void keysChampionsByDisplayNameAsWellAsId() {
+        String json = fixture(Fixtures.DDRAGON_CHAMPIONS);
 
         assertTrue(DataDragonParser.parseChampions(json).containsKey("Miss Fortune"));
         assertEquals(com.macromind.domain.model.ChampionClass.MARKSMAN,
@@ -75,15 +73,15 @@ class DataDragonParserTest {
     }
 
     @Test
-    void parsesOmnivampFromItemDescription() throws IOException {
-        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+    void parsesOmnivampFromItemDescription() {
+        List<Item> items = DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS));
 
         Item gunblade = items.stream().filter(i -> i.name().equals("Hextech Gunblade")).findFirst().orElseThrow();
         assertEquals(10, gunblade.stats().omnivamp());
     }
 
-    private static Map<String, Item> realItems() throws IOException {
-        return DataDragonParser.parseItems(fixture("ddragon-item-real.json")).stream()
+    private static Map<String, Item> realItems() {
+        return DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS_REAL)).stream()
                 .collect(java.util.stream.Collectors.toMap(Item::name, i -> i, (a, b) -> a));
     }
 
@@ -94,7 +92,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void derivesPenetrationAndWoundsTagsFromRealDescriptions() throws IOException {
+    void derivesPenetrationAndWoundsTagsFromRealDescriptions() {
         Map<String, Item> items = realItems();
 
         assertTags(items.get("Mortal Reminder"), ItemTag.GRIEVOUS_WOUNDS, ItemTag.ARMOR_PENETRATION_PERCENT);
@@ -105,7 +103,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void parsesLethalityAndFlatMagicPenetrationIntoStatsAndTags() throws IOException {
+    void parsesLethalityAndFlatMagicPenetrationIntoStatsAndTags() {
         Map<String, Item> items = realItems();
 
         assertTags(items.get("Serpent's Fang"), ItemTag.ARMOR_PENETRATION_FLAT, ItemTag.SHIELD_BREAK);
@@ -115,7 +113,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void derivesShieldPercentHealthTenacityAndOnHitTags() throws IOException {
+    void derivesShieldPercentHealthTenacityAndOnHitTags() {
         Map<String, Item> items = realItems();
 
         assertTags(items.get("Banshee's Veil"), ItemTag.SPELL_SHIELD);
@@ -127,12 +125,12 @@ class DataDragonParserTest {
     }
 
     @Test
-    void parsesAbilityHasteIntoCooldownReduction() throws IOException {
+    void parsesAbilityHasteIntoCooldownReduction() {
         assertEquals(10, realItems().get("Ionian Boots of Lucidity").stats().cooldownReduction(), 0.001);
     }
 
     @Test
-    void dropsConsumablesWardsTrinketsAndJunglePets() throws IOException {
+    void dropsConsumablesWardsTrinketsAndJunglePets() {
         Map<String, Item> items = realItems();
 
         for (String name : List.of("Health Potion", "Control Ward", "Stealth Ward", "Gustwalker Hatchling", "Cappa Juice")) {
@@ -141,7 +139,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void marksLaneStartersButNotExpensiveLaneItems() throws IOException {
+    void marksLaneStartersButNotExpensiveLaneItems() {
         Map<String, Item> items = realItems();
 
         assertTags(items.get("Doran's Blade"), ItemTag.STARTER);
@@ -149,8 +147,8 @@ class DataDragonParserTest {
     }
 
     @Test
-    void keepsOnlyTheLowestIdWhenModeCopiesShareAName() throws IOException {
-        List<Item> thornmails = DataDragonParser.parseItems(fixture("ddragon-item-real.json")).stream()
+    void keepsOnlyTheLowestIdWhenModeCopiesShareAName() {
+        List<Item> thornmails = DataDragonParser.parseItems(fixture(Fixtures.DDRAGON_ITEMS_REAL)).stream()
                 .filter(i -> i.name().equals("Thornmail")).toList();
 
         assertEquals(1, thornmails.size());
@@ -158,7 +156,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void tagsEnchanterItemsFromHealAndShieldPower() throws IOException {
+    void tagsEnchanterItemsFromHealAndShieldPower() {
         Map<String, Item> items = realItems();
 
         assertTags(items.get("Ardent Censer"), ItemTag.ENCHANTER);
@@ -167,7 +165,7 @@ class DataDragonParserTest {
     }
 
     @Test
-    void tagsCleanseItemsFromRealDescriptions() throws IOException {
+    void tagsCleanseItemsFromRealDescriptions() {
         Map<String, Item> items = realItems();
 
         assertTrue(items.containsKey("Quicksilver Sash"), "the cleanse component must stay in the catalogue");
@@ -176,8 +174,8 @@ class DataDragonParserTest {
     }
 
     @Test
-    void everyItemInARealGameIsKnownToTheCatalogueOrDeliberatelyExcluded() throws IOException {
-        String real = Files.readString(Path.of("src/test/resources/fixtures/allgamedata-real.json"));
+    void everyItemInARealGameIsKnownToTheCatalogueOrDeliberatelyExcluded() throws java.io.IOException {
+        String real = Fixtures.read(Fixtures.ALL_GAME_DATA_REAL);
         com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(real);
         java.util.Set<String> consumables = java.util.Set.of("Refillable Potion", "Stealth Ward", "Control Ward", "Health Potion");
         for (com.fasterxml.jackson.databind.JsonNode player : root.path("allPlayers")) {
