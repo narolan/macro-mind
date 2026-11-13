@@ -134,7 +134,7 @@ public record BuildAdvisor(
 
     private List<BuildAdvice> generateAntiHealAdvice() {
         Player target = gameState.enemies().stream()
-                .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() > 15)
+                .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() >= 15)
                 .findFirst().orElse(null);
         return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.GRIEVOUS_WOUNDS),
                 "Enemy team has heavy healing. Consider buying this item to apply Grievous Wounds.",

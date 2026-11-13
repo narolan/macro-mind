@@ -33,7 +33,9 @@ public final class OverlayVisibility {
 
     /** Returns a new map recording when each CRITICAL item was first seen; earlier timestamps are kept. */
     public static Map<Integer, Long> track(Map<Integer, Long> firstSeen, List<BuildAdvice> advice, long gameTime) {
-        Map<Integer, Long> updated = new HashMap<>(firstSeen);
+        // A game clock earlier than a stored timestamp means a new game started: forget the old one.
+        boolean newGame = firstSeen.values().stream().anyMatch(first -> first > gameTime);
+        Map<Integer, Long> updated = new HashMap<>(newGame ? Map.of() : firstSeen);
         advice.stream()
                 .filter(a -> a.priority() == AdvicePriority.CRITICAL)
                 .forEach(a -> updated.putIfAbsent(a.recommendedItem().id(), gameTime));

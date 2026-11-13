@@ -27,7 +27,7 @@ class DataDragonClientTest {
 
         client.load();
 
-        assertEquals(2, client.items().size());
+        assertEquals(3, client.items().size());
         assertTrue(client.championBaseStats("Miss Fortune").isPresent());
     }
 

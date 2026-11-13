@@ -13,6 +13,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import com.macromind.domain.model.GameState;
 
@@ -25,13 +26,20 @@ public class LiveClientPoller {
     private final String baseUrl;
     private final GameStateMapper mapper;
     private final HttpClient http;
+    private final Consumer<Exception> onError;
 
     public LiveClientPoller(String baseUrl, GameStateMapper mapper) {
+        this(baseUrl, mapper, e -> System.err.println("Live client response could not be used: " + e));
+    }
+
+    /** onError hears about unusable responses; a missing game (refused connection, non-200) stays silent. */
+    public LiveClientPoller(String baseUrl, GameStateMapper mapper, Consumer<Exception> onError) {
         if (!LOOPBACK_HOSTS.contains(URI.create(baseUrl).getHost())) {
             throw new IllegalArgumentException("Live client must be a loopback host: " + baseUrl);
         }
         this.baseUrl = baseUrl;
         this.mapper = mapper;
+        this.onError = onError;
         this.http = HttpClient.newBuilder().sslContext(trustAllContext()).connectTimeout(TIMEOUT).build();
     }
 
@@ -48,7 +56,10 @@ public class LiveClientPoller {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Optional.empty();
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
+            return Optional.empty();
+        } catch (RuntimeException e) {
+            onError.accept(e);
             return Optional.empty();
         }
     }

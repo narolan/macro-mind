@@ -62,7 +62,7 @@ class DataDragonParserTest {
     void keepsOnlyPurchasableSummonersRiftItems() throws IOException {
         List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
 
-        assertEquals(java.util.Set.of(3075, 3165), items.stream().map(Item::id).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(java.util.Set.of(3075, 3146, 3165), items.stream().map(Item::id).collect(java.util.stream.Collectors.toSet()));
     }
 
     @Test
@@ -72,5 +72,13 @@ class DataDragonParserTest {
         assertTrue(DataDragonParser.parseChampions(json).containsKey("Miss Fortune"));
         assertEquals(com.macromind.domain.model.ChampionClass.MARKSMAN,
                 DataDragonParser.parseChampionClasses(json).get("Miss Fortune"));
+    }
+
+    @Test
+    void parsesOmnivampFromItemDescription() throws IOException {
+        List<Item> items = DataDragonParser.parseItems(fixture("ddragon-item.json"));
+
+        Item gunblade = items.stream().filter(i -> i.name().equals("Hextech Gunblade")).findFirst().orElseThrow();
+        assertEquals(10, gunblade.stats().omnivamp());
     }
 }

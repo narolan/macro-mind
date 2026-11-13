@@ -75,4 +75,33 @@ class AdviceServerTest {
         assertEquals(5, json.get("advice").size());
         assertEquals("Crit", json.get("advice").get(0).get("item").asText());
     }
+
+    private HttpResponse<String> getWithOrigin(String origin) throws Exception {
+        return HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/advice"))
+                        .header("Origin", origin).build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void allowsCrossOriginReadsOnlyFromTheOverlayOrigin() throws Exception {
+        server = new AdviceServer(0);
+
+        assertEquals("tauri://localhost", getWithOrigin("tauri://localhost").headers()
+                .firstValue("Access-Control-Allow-Origin").orElse(null));
+        assertTrue(getWithOrigin("https://evil.example").headers()
+                .firstValue("Access-Control-Allow-Origin").isEmpty());
+    }
+
+    @Test
+    void rejectsRequestsWithAForeignHostHeaderAgainstDnsRebinding() throws Exception {
+        server = new AdviceServer(0);
+
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", server.port())) {
+            socket.getOutputStream().write(("GET /advice HTTP/1.1\r\nHost: evil.example\r\nConnection: close\r\n\r\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String statusLine = new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream())).readLine();
+            assertTrue(statusLine.contains("403"), statusLine);
+        }
+    }
 }

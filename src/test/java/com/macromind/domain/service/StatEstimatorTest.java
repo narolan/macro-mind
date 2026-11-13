@@ -45,4 +45,13 @@ class StatEstimatorTest {
 
         assertEquals(50, stats.armor());
     }
+
+    @Test
+    void sumsOmnivampFromItems() {
+        ItemStats omni = new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10);
+
+        PlayerStats stats = estimator.estimate("Malphite", 1, List.of(item("Gunblade", omni)));
+
+        assertEquals(10, stats.omnivamp());
+    }
 }

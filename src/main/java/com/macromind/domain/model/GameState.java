@@ -12,6 +12,7 @@ public record GameState(
         GameMode gameMode
 ) {
 
+    private static final int HEAVY_SUSTAIN_PERCENT = 15;
     private static final List<String> HIGH_HEALING_CHAMPIONS = List.of("Aatrox", "Soraka", "Dr. Mundo", "Sylas", "Vladimir", "Swain", "Briar", "Warwick");
 
     public Player highestAdThreat() {
@@ -44,7 +45,7 @@ public record GameState(
         return enemies.stream()
                 .anyMatch(enemy ->
                         HIGH_HEALING_CHAMPIONS.contains(enemy.championName()) ||
-                        (enemy.stats().lifesteal() + enemy.stats().omnivamp() > 15) ||
+                        (enemy.stats().lifesteal() + enemy.stats().omnivamp() >= HEAVY_SUSTAIN_PERCENT) ||
                         enemy.stats().healthRegen() > 100);
     }
 

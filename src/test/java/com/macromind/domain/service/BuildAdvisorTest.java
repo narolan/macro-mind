@@ -107,4 +107,16 @@ class BuildAdvisorTest {
 
         assertTrue(advices.isEmpty());
     }
+
+    @Test
+    void adviseGrievousWoundsAgainstExactlyFifteenPercentLifesteal() {
+        Item grievous = item("Thornmail", NO_STATS, ItemTag.GRIEVOUS_WOUNDS);
+        Player active = player("Ahri", ChampionClass.MAGE, false, List.of(), AVERAGE_STATS);
+        PlayerStats leech = new PlayerStats(80, 50, 2000, 2000, 100, 0, 15, 0, 10);
+        Player enemy = player("Vayne", ChampionClass.MARKSMAN, true, List.of(), leech);
+
+        List<BuildAdvice> advices = new BuildAdvisor(game(active, List.of(enemy)), List.of(grievous)).generateBuildAdvices();
+
+        assertFalse(advices.isEmpty());
+    }
 }

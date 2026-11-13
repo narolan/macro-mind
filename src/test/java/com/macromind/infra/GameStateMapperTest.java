@@ -66,4 +66,29 @@ class GameStateMapperTest {
 
         assertTrue(state.enemies().isEmpty());
     }
+
+    @Test
+    void matchesActivePlayerBySummonerNameWhenRiotIdIsMissingInPlayerList() {
+        String json = "{\"activePlayer\":{\"championStats\":{},\"riotId\":\"Me#EUW\",\"summonerName\":\"Me\"},"
+                + "\"allPlayers\":[{\"championName\":\"Jinx\",\"team\":\"ORDER\",\"summonerName\":\"Me\",\"items\":[],\"level\":3},"
+                + "{\"championName\":\"Soraka\",\"team\":\"CHAOS\",\"summonerName\":\"E1\",\"items\":[],\"level\":3}],"
+                + "\"gameData\":{\"gameTime\":1.0}}";
+
+        GameState state = mapper.toGameState(json);
+
+        assertEquals("Jinx", state.activePlayer().championName());
+        assertEquals(1, state.enemies().size());
+    }
+
+    @Test
+    void readsFlatPenetrationAndLethalityFromActivePlayerStats() {
+        String json = "{\"activePlayer\":{\"championStats\":{\"armorPenetrationFlat\":10,\"physicalLethality\":15,"
+                + "\"magicPenetrationFlat\":12,\"magicLethality\":3},\"summonerName\":\"Me\"},"
+                + "\"allPlayers\":[],\"gameData\":{\"gameTime\":1.0}}";
+
+        Player active = mapper.toGameState(json).activePlayer();
+
+        assertEquals(25, active.getFlatArmorPen());
+        assertEquals(15, active.getFlatMagicPen());
+    }
 }

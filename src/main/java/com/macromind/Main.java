@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class Main {
 
@@ -25,6 +26,13 @@ public final class Main {
 
     private Main() {}
 
+    // The same failure repeats every second; print it once until it changes.
+    private static void logOnce(AtomicReference<String> last, String message) {
+        if (!message.equals(last.getAndSet(message))) {
+            System.err.println(message);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         DataDragonClient dragon = new DataDragonClient(Path.of(System.getProperty("user.home"), ".macromind", "cache"));
         dragon.load();
@@ -33,22 +41,23 @@ public final class Main {
         }
         GameStateMapper mapper = new GameStateMapper(new StatEstimator(dragon::championBaseStats),
                 dragon.items(), dragon::championClass);
-        LiveClientPoller poller = new LiveClientPoller(LIVE_CLIENT, mapper);
+        AtomicReference<String> lastError = new AtomicReference<>();
+        LiveClientPoller poller = new LiveClientPoller(LIVE_CLIENT, mapper, e -> logOnce(lastError, "Live client response could not be used: " + e));
         AdviceServer server = new AdviceServer(PORT);
         System.out.println("MacroMind advice on http://127.0.0.1:" + PORT + "/advice");
 
-        Map<Integer, Long>[] firstSeen = new Map[]{Map.of()};
+        AtomicReference<Map<Integer, Long>> firstSeen = new AtomicReference<>(Map.of());
         Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
             try {
                 Optional<GameState> state = poller.poll();
                 if (state.isEmpty()) {
-                    firstSeen[0] = Map.of();
+                    // keep firstSeen: a single failed poll must not re-trigger old CRITICAL advice
                     server.publish(false, List.of());
                     return;
                 }
                 List<BuildAdvice> advice = new BuildAdvisor(state.get(), dragon.items()).generateBuildAdvices();
-                firstSeen[0] = OverlayVisibility.track(firstSeen[0], advice, state.get().gameTimeInSeconds());
-                server.publish(OverlayVisibility.shouldShow(state.get(), advice, firstSeen[0]), advice);
+                firstSeen.set(OverlayVisibility.track(firstSeen.get(), advice, state.get().gameTimeInSeconds()));
+                server.publish(OverlayVisibility.shouldShow(state.get(), advice, firstSeen.get()), advice);
             } catch (Throwable e) {
                 // a thrown exception would silently cancel the schedule, so nothing may escape this task
                 System.err.println("Poll failed: " + e);

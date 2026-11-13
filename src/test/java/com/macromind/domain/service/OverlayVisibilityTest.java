@@ -55,4 +55,12 @@ class OverlayVisibilityTest {
 
         assertEquals(100L, OverlayVisibility.track(first, advice, 150).get(ITEM.id()));
     }
+
+    @Test
+    void trackStartsFreshWhenGameClockGoesBackwards() {
+        List<BuildAdvice> advice = List.of(advice(AdvicePriority.CRITICAL));
+        Map<Integer, Long> oldGame = OverlayVisibility.track(Map.of(), advice, 900);
+
+        assertEquals(5L, OverlayVisibility.track(oldGame, advice, 5).get(ITEM.id()));
+    }
 }

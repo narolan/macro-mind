@@ -22,14 +22,13 @@ public record Player(
     }
 
     public int getFlatArmorPen() {
-        return items().stream()
-                .filter(item -> item.stats().flatArmorPen() > 0)
+        return stats().flatArmorPen() + items().stream()
                 .mapToInt(item -> item.stats().flatArmorPen())
                 .sum();
     }
 
     public int getFlatMagicPen() {
-        return items().stream()
+        return stats().flatMagicPen() + items().stream()
                 .mapToInt(item -> item.stats().flatMagicPen())
                 .sum();
     }

@@ -37,10 +37,10 @@ public class GameStateMapper {
 
     private GameState map(JsonNode root) {
         JsonNode active = root.path("activePlayer");
-        String activeId = firstNonEmpty(active.path("riotId").asText(), active.path("summonerName").asText());
+        Set<String> activeIds = identities(active);
         JsonNode activeEntry = null;
         for (JsonNode p : root.path("allPlayers")) {
-            if (identity(p).equals(activeId)) {
+            if (activeEntry == null && identities(p).stream().anyMatch(activeIds::contains)) {
                 activeEntry = p;
             }
         }
@@ -52,10 +52,10 @@ public class GameStateMapper {
             if (p == activeEntry) {
                 continue;
             }
-            boolean isEnemy = !activeTeam.isEmpty() && !p.path("team").asText().equals(activeTeam);
             if (activeTeam.isEmpty()) {
                 continue;
             }
+            boolean isEnemy = !p.path("team").asText().equals(activeTeam);
             (isEnemy ? enemies : allies).add(estimatedPlayer(p, isEnemy));
         }
         return new GameState((long) root.path("gameData").path("gameTime").asDouble(),
@@ -69,7 +69,9 @@ public class GameStateMapper {
                 (int) s.path("maxHealth").asDouble(), (int) s.path("currentHealth").asDouble(),
                 (int) s.path("attackDamage").asDouble(), (int) s.path("abilityPower").asDouble(),
                 (int) s.path("lifeSteal").asDouble(), (int) s.path("spellVamp").asDouble(),
-                (int) s.path("healthRegenRate").asDouble());
+                (int) s.path("healthRegenRate").asDouble(),
+                (int) (s.path("armorPenetrationFlat").asDouble() + s.path("physicalLethality").asDouble()),
+                (int) (s.path("magicPenetrationFlat").asDouble() + s.path("magicLethality").asDouble()));
         JsonNode e = entry == null ? MAPPER.createObjectNode() : entry;
         String champion = e.path("championName").asText();
         return new Player(identity(active), champion, classOf.apply(champion), active.path("level").asInt(),
@@ -117,6 +119,18 @@ public class GameStateMapper {
 
     private static String identity(JsonNode p) {
         return firstNonEmpty(p.path("riotId").asText(), p.path("summonerName").asText());
+    }
+
+    // The riotId format differs between endpoints, so match on every identity either side offers.
+    private static Set<String> identities(JsonNode p) {
+        Set<String> ids = new java.util.HashSet<>();
+        for (String field : List.of("riotId", "riotIdGameName", "summonerName")) {
+            String value = p.path(field).asText();
+            if (!value.isEmpty()) {
+                ids.add(value);
+            }
+        }
+        return ids;
     }
 
     private static String firstNonEmpty(String a, String b) {

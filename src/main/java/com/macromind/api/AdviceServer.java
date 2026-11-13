@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AdviceServer {
 
     private static final int MAX_ADVICE = 5;
+    // The Tauri webview origin differs per platform (tauri://localhost, http(s)://tauri.localhost on Windows).
+    private static final java.util.Set<String> OVERLAY_ORIGINS =
+            java.util.Set.of("tauri://localhost", "http://tauri.localhost", "https://tauri.localhost");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpServer server;
@@ -25,14 +28,27 @@ public class AdviceServer {
     public AdviceServer(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         server.createContext("/advice", exchange -> {
+            // A foreign Host header means DNS rebinding: refuse before anything is read.
+            if (!allowedHosts().contains(exchange.getRequestHeaders().getFirst("Host"))) {
+                exchange.sendResponseHeaders(403, -1);
+                exchange.close();
+                return;
+            }
             byte[] body = latest.get();
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            String origin = exchange.getRequestHeaders().getFirst("Origin");
+            if (origin != null && OVERLAY_ORIGINS.contains(origin)) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", origin);
+            }
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);
             exchange.close();
         });
         server.start();
+    }
+
+    private java.util.Set<String> allowedHosts() {
+        return java.util.Set.of("127.0.0.1:" + port(), "localhost:" + port());
     }
 
     public int port() {

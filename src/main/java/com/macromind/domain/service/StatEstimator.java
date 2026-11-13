@@ -37,7 +37,7 @@ public class StatEstimator {
                 (int) Math.round(base.attackDamage() + base.attackDamagePerLevel() * growth) + itemAd,
                 itemAp,
                 lifesteal,
-                0,
+                items.stream().mapToInt(i -> i.stats().omnivamp()).sum(),
                 0);
     }
 

@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Pure parsing of Riot Data Dragon JSON. Malformed input yields empty results, never an exception. */
 final class DataDragonParser {
@@ -42,7 +44,7 @@ final class DataDragonParser {
     static Map<String, ChampionBaseStats> parseChampions(String json) {
         Map<String, ChampionBaseStats> result = new HashMap<>();
         JsonNode data = dataNode(json);
-        data.fields().forEachRemaining(entry -> {
+        data.properties().forEach(entry -> {
             JsonNode s = entry.getValue().path("stats");
             ChampionBaseStats stats = new ChampionBaseStats(
                     s.path("hp").asDouble(), s.path("hpperlevel").asDouble(),
@@ -58,7 +60,7 @@ final class DataDragonParser {
 
     static Map<String, ChampionClass> parseChampionClasses(String json) {
         Map<String, ChampionClass> result = new HashMap<>();
-        dataNode(json).fields().forEachRemaining(entry -> {
+        dataNode(json).properties().forEach(entry -> {
             String firstTag = entry.getValue().path("tags").path(0).asText();
             ChampionClass championClass = switch (firstTag) {
                 case "Marksman" -> ChampionClass.MARKSMAN;
@@ -79,7 +81,7 @@ final class DataDragonParser {
 
     static List<Item> parseItems(String json) {
         List<Item> result = new ArrayList<>();
-        dataNode(json).fields().forEachRemaining(entry -> {
+        dataNode(json).properties().forEach(entry -> {
             JsonNode node = entry.getValue();
             String name = node.path("name").asText();
             if (!isBuyableOnSummonersRift(node, name)) {
@@ -93,11 +95,20 @@ final class DataDragonParser {
                     0, 0,
                     s.path("PercentAttackSpeedMod").asDouble(), 0,
                     s.path("PercentLifeStealMod").asDouble() * 100,
-                    s.path("FlatCritChanceMod").asDouble());
+                    s.path("FlatCritChanceMod").asDouble(),
+                    omnivamp(node.path("description").asText()));
             result.add(new Item(Integer.parseInt(entry.getKey()), name, node.path("gold").path("total").asInt(),
                     stats, TAGS_BY_ITEM_NAME.getOrDefault(name, Set.of())));
         });
         return List.copyOf(result);
+    }
+
+    private static final Pattern OMNIVAMP = Pattern.compile("(\\d+)%\\s*Omnivamp");
+
+    // Omnivamp has no stat key in Data Dragon; it only appears in the description text ("10% Omnivamp").
+    private static int omnivamp(String description) {
+        Matcher matcher = OMNIVAMP.matcher(description.replaceAll("<[^>]*>", " "));
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
     }
 
     // Real item.json holds Arena/ARAM/event copies and unbuyable entries; only these can be advised.
