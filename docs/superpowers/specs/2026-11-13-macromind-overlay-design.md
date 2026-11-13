@@ -1,0 +1,141 @@
+# MacroMind: in-game item advisor overlay (design)
+
+## Intent and why
+
+While playing League of Legends, a transparent overlay tells the player what to
+buy next, based on the current game state and a set of predefined rules (e.g.
+"enemy team out-heals you, buy Grievous Wounds"; "enemy is heavy AP and you are
+squishy, buy magic resist"). Personal tool for the author first; possibly public
+later if it works well.
+
+## Goals
+
+- Show advice automatically, with no interaction: when the player is dead / in
+  base (the natural buy moment), or whenever a new high-priority advice appears.
+- Fast and lightweight: low CPU/RAM, near-instant updates, negligible impact on
+  the game.
+- Rules are data-driven enough that adding a rule is cheap (the current
+  `BuildAdvisor` is long and copy-pasted).
+
+## Non-goals
+
+- Not a full build-path / runes / skill-order tool.
+- No public distribution, installer, or Riot developer-portal registration for now.
+- No cloud, accounts, or telemetry.
+- No in-overlay interaction (it is click-through).
+
+## Anti-goals
+
+- Slowing or stuttering the game, or any input interference with it.
+- Using any data not available from the official local client or Riot's
+  public static data.
+- Advice that is wrong because of bad estimates presented as certainty.
+
+## Constraints and facts (verified from Riot docs page, via summary)
+
+- Live Client Data API: `https://127.0.0.1:2999/liveclientdata/*`, local only,
+  self-signed cert, no auth. Endpoints include `/allgamedata`, `/activeplayer`,
+  `/playerlist`, `/gamestats`, `/eventdata`.
+- The **active player** gets full `championStats` (armor, MR, max HP, pen,
+  lifesteal, etc.), gold, level.
+- **Other players, including enemies**, expose only: champion name, level,
+  items, scores (KDA, CS), runes, summoner spells, dead/respawn state, team.
+  **No armor, MR, max HP, AP/AD, or gold.** To be re-verified against a live
+  game / the served swagger spec before building on it.
+- A browser tab cannot draw over a game: the overlay must be a native
+  transparent, click-through, always-on-top window. League must run in
+  borderless or windowed mode (not exclusive fullscreen).
+- Riot policy risk (relevant only if made public): static pre-game-data overlays
+  are approved; apps that "dictate player decisions" or give session-specific
+  information are not. Item recommendation is a grey area. Revisit before any
+  public release.
+- Existing code: Java 25, Spring Boot 4.1.1 (webmvc + websocket), GraalVM native
+  plugin configured; domain records and a rule engine (`BuildAdvisor`) exist.
+
+## Approaches considered
+
+| | Backend | Overlay | Trade-off |
+|---|---|---|---|
+| **A (chosen)** | Keep Java domain, drop Spring; plain Java local server | Tauri window polling backend ~1/s | Keeps working rules; JVM process; native image is an escape hatch |
+| B | Rewrite in Go/TypeScript | Tauri | Tiny binary, but rewrites ~400 lines and adds a second language |
+| C | Rules in Rust inside Tauri | Same process | One install, but a Rust rewrite and no separate frontend |
+
+Chosen: A, because it reuses the existing rules and model and the load (one
+local poll per second) does not justify a rewrite. Polling instead of
+websockets: single local client, ~1 update/s.
+
+## Design
+
+```
+League client (127.0.0.1:2999)
+        |  HTTPS poll (~1/s, cert check skipped for localhost)
+        v
+  Java backend (no Spring)
+   - LiveClientPoller      -> raw game data
+   - StatEstimator         -> enemy Player stats (see below)
+   - BuildAdvisor (rules)  -> List<BuildAdvice>
+   - local HTTP endpoint   -> GET /advice (JSON)
+        |  HTTP poll (~1/s, localhost)
+        v
+  Tauri overlay (transparent, click-through, always-on-top)
+   - shows advice when: player is dead / in base, or a new CRITICAL advice
+```
+
+### Enemy stat estimation (key risk)
+
+Because enemy stats are not exposed, `StatEstimator` builds them from
+(a) base stats + per-level growth per champion from Riot Data Dragon
+(static, downloaded once and cached), and (b) the stats of the enemy's visible
+items. This is an approximation (no runes, buffs, or stacking effects). Advice
+should be treated as heuristic; thresholds in rules (e.g. armor > 150) must be
+tuned against these estimates, and the item catalogue also comes from Data Dragon.
+
+### Rules
+
+Keep `BuildAdvisor` semantics, but fix known defects before extending:
+- magic-resist rule subtracts `getFlatArmorPen()`; should use magic pen.
+- AP-threat TANK/BRUISER branches use the AD message/target.
+- Large duplicated blocks should be collapsed into a small rule table so new
+  rules are cheap.
+
+### When advice shows
+
+Overlay displays advice when the player is dead or at base, or when a new
+CRITICAL advice appears; otherwise hidden. How "in base" is detected is left to
+the builder (the API has no explicit flag; candidates: gold + position proxy,
+shop-available events).
+
+## Calls made by the author of this doc (not discussed with the user)
+
+- **First milestone is a verification spike:** hit `/swagger/v3/openapi.json` and
+  a live or practice game, and confirm exactly which enemy fields exist. The
+  `StatEstimator` scope depends on the result.
+- **Accuracy:** no tolerance target. Estimated values are heuristic, and each
+  advice carries a `confidence` flag (exact for own stats, estimated for enemy
+  stats). No calibration harness for now. Add one if advice proves unreliable.
+- **Platform:** the game runs on Windows (user-stated; Vanguard anti-cheat is
+  in play). Spike click-through transparency on Windows, not on the macOS dev
+  machine. League runs in borderless or windowed mode. The Java backend is
+  cross-platform, so it can be developed here against recorded API responses,
+  but the overlay must be tested on the Windows machine. Not verified: whether
+  Vanguard objects to a separate transparent window beside the game. The spike
+  should check this.
+- **Rules live as code:** a small table in Java, not an external data file.
+  Add a loader only if editing without a rebuild proves valuable.
+
+## Left to the builder
+
+- Plain-Java HTTP server choice (JDK `HttpServer` is the default pick).
+- Data Dragon caching and patch-version handling.
+- Exact overlay UI layout, number of items shown, styling.
+- "In base" detection method.
+- Test strategy (project rule: TDD, 80% coverage; rules are pure functions of
+  `GameState` and testable without the game).
+- Whether to keep Spring Boot's Gradle plugins at all (expected: remove).
+
+## Open risks
+
+1. Enemy-stat estimation accuracy drives advice quality.
+2. Tauri click-through transparency behaviour on the user's OS must be proven
+   with a spike early.
+3. Riot policy if released publicly.
