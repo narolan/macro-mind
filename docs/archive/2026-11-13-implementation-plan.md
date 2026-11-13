@@ -1,5 +1,10 @@
 # MacroMind Overlay Implementation Plan
 
+> **Historical.** This is the implementation plan as written at the start of the project, kept for context. The code has moved
+> on (notably: the overlay is Electron, not Tauri, see `docs/adr/0001-plain-java-plus-electron-overlay.md`).
+> For how things work now, read the README.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A local Java backend that polls League's Live Client Data API, estimates enemy stats, runs item-advice rules, and serves JSON to a transparent Tauri overlay on Windows.
@@ -8,7 +13,7 @@
 
 **Tech Stack:** Java 25, Gradle, JUnit 5, JDK `HttpClient` and `HttpServer`, Jackson for JSON, Tauri (Windows) for the overlay.
 
-**Spec:** `docs/superpowers/specs/2026-11-13-macromind-overlay-design.md`
+**Spec:** `docs/archive/2026-11-13-design.md`
 
 ## Global Constraints
 
@@ -36,7 +41,7 @@
 
 **Files:**
 - Create: `src/test/resources/fixtures/allgamedata.json` (a recorded real response)
-- Create: `docs/superpowers/notes/live-client-fields.md`
+- Create: `docs/live-client-api.md`
 
 **Interfaces:**
 - Produces: the recorded fixture used by Tasks 6 and 7, and a written answer on which enemy fields exist.
@@ -44,7 +49,7 @@
 - [ ] **Step 1:** Start a practice-tool game. Run `curl --insecure https://127.0.0.1:2999/swagger/v3/openapi.json` and `curl --insecure https://127.0.0.1:2999/liveclientdata/allgamedata`.
 - [ ] **Step 2:** Save the `allgamedata` response, with the riotId and summoner names anonymised, as the fixture.
 - [ ] **Step 3:** In the notes file, list per `allPlayers` entry which stat fields are present. State yes or no for enemy armor, magic resist, max health, AD, AP and gold. If enemies do expose more than assumed, adjust Task 5 before starting it.
-- [ ] **Step 4:** Commit: `git add docs/superpowers/notes src/test/resources/fixtures && git commit -m "docs: record live client fields and fixture"`
+- [ ] **Step 4:** Commit: `git add docs src/test/resources/fixtures && git commit -m "docs: record live client fields and fixture"`
 
 ### Task 2: Drop Spring and fix known rule bugs
 
@@ -168,7 +173,7 @@
 **Interfaces:**
 - Consumes: `GET http://127.0.0.1:8765/advice` from Task 7.
 
-- [ ] **Step 1: Spike first.** Create a Tauri window with `transparent: true`, `decorations: false`, `alwaysOnTop: true`, and call `setIgnoreCursorEvents(true)`. On Windows, with League in borderless mode, confirm it is visible over the game, that clicks pass through, and that Vanguard raises no complaint. Record the result in `docs/superpowers/notes/overlay-spike.md`. If it fails, stop and report. Do not build the UI on a broken window.
+- [ ] **Step 1: Spike first.** Create a Tauri window with `transparent: true`, `decorations: false`, `alwaysOnTop: true`, and call `setIgnoreCursorEvents(true)`. On Windows, with League in borderless mode, confirm it is visible over the game, that clicks pass through, and that Vanguard raises no complaint. Record the result in `docs/overlay-spike.md`. If it fails, stop and report. Do not build the UI on a broken window.
 - [ ] **Step 2:** `overlay.js` polls `/advice` once a second. It hides the window when `visible=false` or the request fails, and otherwise renders up to 3 items, CRITICAL first, each with its reasoning and an "est." badge when `confidence=ESTIMATED`.
 - [ ] **Step 3:** Manual check, backend and overlay together in a practice game: advice appears when dead, and disappears when `visible` turns false.
 - [ ] **Step 4:** Commit: `feat: add Tauri overlay`
