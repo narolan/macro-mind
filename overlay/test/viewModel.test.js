@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { toViewModel, viewKey, reconcile, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED } = require('../src/viewModel');
+const { toViewModel, viewKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW } = require('../src/viewModel');
 
 const advice = (item, priority, extra = {}) => ({
   item, reasoning: `why ${item}`, priority, category: 'DEFENSIVE', confidence: 'EXACT', target: null, ...extra,
@@ -16,7 +16,7 @@ test('hides when visible but there is no advice', () => {
 });
 
 test('hides when the backend is unreachable (null payload)', () => {
-  assert.deepEqual(toViewModel(null), DISCONNECTED);
+  assert.deepEqual(toViewModel(null), HIDDEN_VIEW);
 });
 
 test('hides on a malformed payload instead of throwing', () => {
@@ -140,14 +140,4 @@ test('viewKey changes when a row, its reason, its priority or its alternatives c
 
 test('viewKey of a hidden view is the same however it became hidden', () => {
   assert.equal(viewKey(toViewModel(null)), viewKey(toViewModel({ visible: false, advice: [] })));
-});
-
-test('reconcile keeps surviving cards in place, drops stale ones and only creates new ones', () => {
-  const created = [];
-  const make = (key) => { created.push(key); return { key }; };
-  const first = reconcile(new Map(), ['a', 'b'], make);
-  const second = reconcile(first, ['b', 'c'], make);
-  assert.deepEqual(created, ['a', 'b', 'c']);
-  assert.equal(second.get('b'), first.get('b'));
-  assert.deepEqual([...second.keys()], ['b', 'c']);
 });

@@ -2,10 +2,29 @@
 
 const MAX_ROWS = 3;
 const MAX_ALTERNATIVES = 3;
-const DISCONNECTED = Object.freeze({ visible: false, rows: [] });
-const LEVELS = { CRITICAL: 'critical', RECOMMENDED: 'recommended' };
 const ICON_HOST = 'https://ddragon.leagueoflegends.com/cdn';
 const PATCH_VERSION = /^\d+(\.\d+){1,3}$/;
+const DEFAULT_LEVEL = 'situational';
+const LEVELS = Object.freeze({ CRITICAL: 'critical', RECOMMENDED: 'recommended' });
+
+/**
+ * @typedef {object} Row
+ * @property {string} item          Name of the item to buy.
+ * @property {string} reasoning     Why it is advised.
+ * @property {string} level         'critical' | 'recommended' | 'situational' (drives the card colour).
+ * @property {boolean} estimated    True when the advice rests on estimated enemy stats.
+ * @property {string|null} target   The enemy champion the advice is about, if any.
+ * @property {string|null} icon     Item icon URL, or null when none can be built.
+ * @property {string[]} alternatives Other items with the same reason.
+ * @property {string} key           Identifies what the row looks like; equal keys mean the same card.
+ *
+ * @typedef {object} ViewModel
+ * @property {boolean} visible
+ * @property {Row[]} rows
+ */
+
+/** @type {ViewModel} */
+const HIDDEN_VIEW = Object.freeze({ visible: false, rows: [] });
 
 /** Only a plain patch number and a positive integer id may reach the url; anything else means no icon. */
 function iconUrl(version, itemId) {
@@ -14,15 +33,34 @@ function iconUrl(version, itemId) {
   return `${ICON_HOST}/${version}/img/item/${itemId}.png`;
 }
 
-function toRow(a, iconVersion) {
+const hasItemName = (advice) => Boolean(advice) && typeof advice.item === 'string' && advice.item.length > 0;
+
+/** Everything about a row except its key. */
+function toRowContent(advice, iconVersion) {
   return {
-    item: a.item,
-    reasoning: typeof a.reasoning === 'string' ? a.reasoning : '',
-    level: LEVELS[a.priority] || 'situational',
-    estimated: a.confidence === 'ESTIMATED',
-    target: typeof a.target === 'string' ? a.target : null,
-    icon: iconUrl(iconVersion, a.itemId),
+    item: advice.item,
+    reasoning: typeof advice.reasoning === 'string' ? advice.reasoning : '',
+    level: LEVELS[advice.priority] || DEFAULT_LEVEL,
+    estimated: advice.confidence === 'ESTIMATED',
+    target: typeof advice.target === 'string' ? advice.target : null,
+    icon: iconUrl(iconVersion, advice.itemId),
     alternatives: [],
+  };
+}
+
+/** A stable string for a row's content: two rows with the same key look the same. */
+function rowKey(content) {
+  return JSON.stringify([content.item, content.level, content.reasoning, content.estimated, content.target,
+    content.alternatives, content.icon]);
+}
+
+/** A copy of group that also includes row's item as an alternative (up to the limit), and row's flags. */
+function mergeInto(group, row) {
+  return {
+    ...group,
+    alternatives: group.alternatives.length < MAX_ALTERNATIVES ? [...group.alternatives, row.item] : group.alternatives,
+    estimated: group.estimated || row.estimated,
+    target: group.target || row.target,
   };
 }
 
@@ -30,45 +68,33 @@ function toRow(a, iconVersion) {
 function groupRows(rows) {
   const groups = new Map();
   for (const row of rows) {
-    const key = `${row.level}|${row.reasoning}`;
-    const group = groups.get(key);
-    if (!group) {
-      groups.set(key, { ...row });
-      continue;
-    }
-    if (group.alternatives.length < MAX_ALTERNATIVES) group.alternatives = [...group.alternatives, row.item];
-    group.estimated = group.estimated || row.estimated;
-    group.target = group.target || row.target;
+    const groupId = `${row.level}|${row.reasoning}`;
+    groups.set(groupId, groups.has(groupId) ? mergeInto(groups.get(groupId), row) : row);
   }
   return [...groups.values()];
 }
 
-/** Turns the backend's /advice payload into what the window draws. Never throws: bad input hides the overlay. */
+/**
+ * Turns the backend's /advice payload into what the window draws. Never throws: bad input hides the overlay.
+ * @param {unknown} payload
+ * @returns {ViewModel}
+ */
 function toViewModel(payload) {
   if (!payload || payload.visible !== true || !Array.isArray(payload.advice)) {
-    return DISCONNECTED;
+    return HIDDEN_VIEW;
   }
-  const rows = groupRows(
-    payload.advice.filter((a) => a && typeof a.item === 'string' && a.item.length > 0).map((a) => toRow(a, payload.iconVersion)),
-  ).slice(0, MAX_ROWS);
-  return rows.length === 0 ? DISCONNECTED : { visible: true, rows };
+  const rows = payload.advice.filter(hasItemName).map((advice) => toRowContent(advice, payload.iconVersion));
+  const shown = groupRows(rows).slice(0, MAX_ROWS).map((content) => ({ ...content, key: rowKey(content) }));
+  return shown.length === 0 ? HIDDEN_VIEW : { visible: true, rows: shown };
 }
 
-/** A stable string for one row; two rows with the same key look the same, so the renderer can keep the old card. */
-function rowKey(row) {
-  return JSON.stringify([row.item, row.level, row.reasoning, row.estimated, row.target, row.alternatives, row.icon]);
+/**
+ * A stable string for a whole view; equal keys mean nothing visible changed.
+ * @param {ViewModel} viewModel
+ * @returns {string}
+ */
+function viewKey(viewModel) {
+  return viewModel.visible ? viewModel.rows.map((row) => row.key).join('\n') : '';
 }
 
-/** A stable string for a whole view; equal keys mean nothing visible changed. */
-function viewKey(vm) {
-  return vm.visible ? vm.rows.map(rowKey).join('\n') : '';
-}
-
-/** Next map of key -> card: surviving keys keep their existing card, only new keys call make(). Pure and order-preserving. */
-function reconcile(previous, keys, make) {
-  const next = new Map();
-  for (const key of keys) next.set(key, previous.get(key) || make(key));
-  return next;
-}
-
-module.exports = { toViewModel, viewKey, rowKey, reconcile, MAX_ROWS, MAX_ALTERNATIVES, DISCONNECTED };
+module.exports = { toViewModel, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };

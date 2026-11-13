@@ -9,9 +9,6 @@ function element(tag, className, text) {
   return node;
 }
 
-// Cards already on screen are kept, so a card that did not change is never touched (and never re-animates).
-let shown = new Map();
-
 function cardFor(row) {
   const li = element('li', `row ${row.level}`);
   const name = element('div', 'name');
@@ -30,19 +27,33 @@ function cardFor(row) {
   return li;
 }
 
-// The renderer is a small script, so it cannot require() the view-model module; it keeps its own key per row.
-const keyOf = (row) => JSON.stringify([row.item, row.level, row.reasoning, row.estimated, row.target, row.alternatives, row.icon]);
+// Cards already on screen are kept, so a card that did not change is never touched (and never re-animates).
+let shown = new Map();
 
-window.macromind.onViewModel((vm) => {
-  const rowsByKey = new Map(vm.rows.map((row) => [keyOf(row), row]));
-  const next = new Map();
-  for (const [key, row] of rowsByKey) next.set(key, shown.get(key) || cardFor(row));
-  for (const [key, card] of shown) if (!next.has(key)) card.remove();       // only departed cards leave
+/** Key -> card for the new rows: an existing card is reused, only new rows build one. */
+function nextCards(rows) {
+  return new Map(rows.map((row) => [row.key, shown.get(row.key) || cardFor(row)]));
+}
+
+function removeDeparted(next) {
+  for (const [key, card] of shown) {
+    if (!next.has(key)) card.remove();
+  }
+}
+
+/** Puts the cards in order, moving only the ones that are not already in the right place. */
+function placeInOrder(next) {
   let previous = null;
-  for (const card of next.values()) {                                        // only new or moved cards are placed
+  for (const card of next.values()) {
     const expected = previous ? previous.nextSibling : list.firstChild;
     if (card !== expected) list.insertBefore(card, expected);
     previous = card;
   }
+}
+
+window.macromind.onViewModel((viewModel) => {
+  const next = nextCards(viewModel.rows);
+  removeDeparted(next);
+  placeInOrder(next);
   shown = next;
 });
