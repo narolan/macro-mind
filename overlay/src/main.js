@@ -2,22 +2,23 @@
 
 const { app, BrowserWindow, screen } = require('electron');
 const path = require('node:path');
-const { fetchAdvice } = require('./poller');
-const { toViewModel, viewKey } = require('./viewModel');
+const { fetchAdvice, startPolling } = require('./poller');
 
 const ADVICE_URL = process.env.MACROMIND_URL || 'http://127.0.0.1:8765/advice';
 const POLL_INTERVAL_MS = 1000;
-const WIDTH = 380;
-const HEIGHT = 340;
-const MARGIN = 24;
+const VIEW_MODEL_CHANNEL = 'view-model'; // must match the channel preload.js listens on
+const WINDOW_WIDTH = 380;
+const WINDOW_HEIGHT = 340;
+const SCREEN_EDGE_MARGIN = 24;
+const ALWAYS_ON_TOP_LEVEL = 'screen-saver'; // keeps the overlay above full-screen games
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay();
   const window = new BrowserWindow({
-    width: WIDTH,
-    height: HEIGHT,
-    x: workArea.x + workArea.width - WIDTH - MARGIN,
-    y: workArea.y + MARGIN,
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    x: workArea.x + workArea.width - WINDOW_WIDTH - SCREEN_EDGE_MARGIN,
+    y: workArea.y + SCREEN_EDGE_MARGIN,
     transparent: true,
     frame: false,
     resizable: false,
@@ -27,30 +28,41 @@ function createWindow() {
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
-  window.setAlwaysOnTop(true, 'screen-saver');
+  window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
   window.setIgnoreMouseEvents(true, { forward: true }); // click-through
+  lockDownNavigation(window);
   window.loadFile(path.join(__dirname, 'overlay.html'));
   return window;
 }
 
-let lastKey = null;
+// The overlay only ever shows its own page: refuse popups and any navigation away from it.
+function lockDownNavigation(window) {
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event) => event.preventDefault());
+}
 
-async function tick(window) {
+function syncVisibility(window, visible) {
+  if (visible && !window.isVisible()) window.showInactive();
+  if (!visible && window.isVisible()) window.hide();
+}
+
+function show(window, view) {
   if (window.isDestroyed()) return;
-  const vm = toViewModel(await fetchAdvice(ADVICE_URL));
-  if (window.isDestroyed()) return;
-  const key = viewKey(vm);
-  if (key !== lastKey) { // an unchanged view is never re-sent, so nothing in the window is touched
-    lastKey = key;
-    window.webContents.send('view-model', vm);
-  }
-  if (vm.visible && !window.isVisible()) window.showInactive();
-  if (!vm.visible && window.isVisible()) window.hide();
+  window.webContents.send(VIEW_MODEL_CHANNEL, view);
+  syncVisibility(window, view.visible);
 }
 
 app.whenReady().then(() => {
   const window = createWindow();
-  setInterval(() => { tick(window).catch(() => {}); }, POLL_INTERVAL_MS);
+  // Start only once the page has loaded: a view sent earlier would reach a renderer that has not subscribed yet,
+  // and an unchanged view is never sent again, so it would be lost for good.
+  window.webContents.once('did-finish-load', () => {
+    startPolling({
+      fetch: () => fetchAdvice(ADVICE_URL),
+      onView: (view) => show(window, view),
+      intervalMs: POLL_INTERVAL_MS,
+    });
+  });
 });
 
 app.on('window-all-closed', () => app.quit());
