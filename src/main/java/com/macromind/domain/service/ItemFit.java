@@ -11,14 +11,13 @@ final class ItemFit {
 
     /** Starters and plain components are never advised; anti-heal components, cleanses and boots are. */
     static boolean isAdviseable(Item item) {
-        if (item.tags().contains(ItemTag.STARTER)) {
+        if (item.hasTag(ItemTag.STARTER)) {
             return false;
         }
-        if (!item.tags().contains(ItemTag.COMPONENT)) {
+        if (!item.hasTag(ItemTag.COMPONENT)) {
             return true;
         }
-        return item.tags().contains(ItemTag.GRIEVOUS_WOUNDS) || item.tags().contains(ItemTag.BOOTS)
-                || item.tags().contains(ItemTag.CLEANSE);
+        return item.hasAnyTag(ItemTag.GRIEVOUS_WOUNDS, ItemTag.BOOTS, ItemTag.CLEANSE);
     }
 
     /** An item that only gives AD is useless to a mage, and vice versa. Neutral (defensive/utility) items fit anyone. */

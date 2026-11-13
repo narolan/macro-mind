@@ -122,7 +122,7 @@ public record GameState(
         }
 
         if(activePlayer.items().stream()
-                .noneMatch(item -> item.tags().contains(ItemTag.BURST_RESISTANCE) || item.tags().contains(ItemTag.SPELL_SHIELD))) {
+                .noneMatch(item -> item.hasAnyTag(ItemTag.BURST_RESISTANCE, ItemTag.SPELL_SHIELD))) {
             squishyBools++;
         }
 

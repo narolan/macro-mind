@@ -58,19 +58,6 @@ public record BuildAdvisor(
         return item.stats().abilityPower() > 0 || item.stats().cooldownReduction() > 0;
     }
 
-    private static boolean tagged(Item item, ItemTag... tags) {
-        for (ItemTag tag : tags) {
-            if (item.tags().contains(tag)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean survivability(Item item) {
-        return tagged(item, ItemTag.BURST_RESISTANCE);
-    }
-
     private List<BuildAdvice> generateHeavyAdEnemyThreatAdvice(Player activePlayer) {
         return heavyThreatAdvice(activePlayer, AD_REASON, gameState.highestAdThreat(),
                 item -> item.stats().armor() > 0,
@@ -89,12 +76,12 @@ public record BuildAdvisor(
         return switch (activePlayer.championClass()) {
             case MARKSMAN -> squishy
                     ? adviceFor(new AdviceRule(
-                            item -> offensive(item) && (resist.test(item) || tagged(item, ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
+                            item -> offensive(item) && (resist.test(item) || item.hasAnyTag(ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
                             reasoning, AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE), target)
                     : List.<BuildAdvice>of();
             case MAGE -> squishy
                     ? adviceFor(new AdviceRule(
-                            item -> magical(item) && (resist.test(item) || tagged(item, ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
+                            item -> magical(item) && (resist.test(item) || item.hasAnyTag(ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE)),
                             reasoning, AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE), target)
                     : List.<BuildAdvice>of();
             case TANK -> adviceFor(new AdviceRule(
@@ -102,7 +89,7 @@ public record BuildAdvisor(
                     reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target);
             case BRUISER -> squishy
                     ? adviceFor(new AdviceRule(
-                            item -> resist.test(item) && (item.stats().health() > 0 || item.stats().attackDamage() > 0 || survivability(item)),
+                            item -> resist.test(item) && (item.stats().health() > 0 || item.stats().attackDamage() > 0 || item.hasTag(ItemTag.BURST_RESISTANCE)),
                             reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE), target)
                     : List.<BuildAdvice>of();
             case ASSASSIN -> assassinAdvice(activePlayer, reasoning, target, assassinItems);
@@ -127,28 +114,28 @@ public record BuildAdvisor(
         Player target = gameState.enemies().stream()
                 .filter(enemy -> enemy.stats().healthRegen() > 100 || enemy.stats().lifesteal() + enemy.stats().omnivamp() >= 15)
                 .findFirst().orElse(null);
-        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.GRIEVOUS_WOUNDS),
+        return adviceFor(new AdviceRule(item -> item.hasAnyTag(ItemTag.GRIEVOUS_WOUNDS),
                 "Enemy team has heavy healing. Consider buying this item to apply Grievous Wounds.",
                 AdvicePriority.CRITICAL, AdviceCategory.UTILITY), target);
     }
 
     private List<BuildAdvice> generateAntiArmorAdvice() {
         Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().armor() > 150).findFirst().orElse(null);
-        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.ARMOR_PENETRATION_PERCENT),
+        return adviceFor(new AdviceRule(item -> item.hasAnyTag(ItemTag.ARMOR_PENETRATION_PERCENT),
                 "Enemy team has high armor. Consider buying this item to penetrate their defenses.",
                 AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE), target);
     }
 
     private List<BuildAdvice> generateAntiMagicResistAdvice() {
         Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().magicResist() > 150).findFirst().orElse(null);
-        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.MAGIC_PENETRATION_PERCENT),
+        return adviceFor(new AdviceRule(item -> item.hasAnyTag(ItemTag.MAGIC_PENETRATION_PERCENT),
                 "Enemy team has high magic resistance. Consider buying this item to penetrate their defenses.",
                 AdvicePriority.RECOMMENDED, AdviceCategory.OFFENSIVE), target);
     }
 
     private List<BuildAdvice> generatePercentHealthDamageAdvice(AdvicePriority advicePriority) {
         Player target = gameState.enemies().stream().filter(enemy -> enemy.stats().maxHealth() > 3500).findFirst().orElse(null);
-        return adviceFor(new AdviceRule(item -> tagged(item, ItemTag.PERCENT_HEALTH_DAMAGE),
+        return adviceFor(new AdviceRule(item -> item.hasAnyTag(ItemTag.PERCENT_HEALTH_DAMAGE),
                 "Enemy team has high health. Consider buying this item to deal percentage health damage.",
                 advicePriority, AdviceCategory.OFFENSIVE), target);
     }

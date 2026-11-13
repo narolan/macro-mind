@@ -26,7 +26,7 @@ final class AdviceFactory {
                 .filter(item -> !ownedNames.contains(item.name()))
                 .filter(ItemFit::isAdviseable)
                 .filter(item -> ItemFit.fitsDamageType(item, active))
-                .filter(item -> !(item.tags().contains(ItemTag.BOOTS) && active.hasBoots()))
+                .filter(item -> !(item.hasTag(ItemTag.BOOTS) && active.hasBoots()))
                 .filter(rule.itemMatcher())
                 .map(item -> new BuildAdvice(item, rule.reasoning(), rule.priority(), rule.category(),
                         target, confidence, gameState.gameTimeInSeconds()))

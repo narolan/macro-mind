@@ -36,7 +36,7 @@ final class CoreItemRules {
     }
 
     private boolean isBuildComplete() {
-        long finished = me.items().stream().filter(i -> !i.tags().contains(ItemTag.BOOTS)).count();
+        long finished = me.items().stream().filter(i -> !i.hasTag(ItemTag.BOOTS)).count();
         return finished >= MAX_ITEM_SLOTS - 1;
     }
 
@@ -44,7 +44,7 @@ final class CoreItemRules {
         if (me.hasBoots() || gameState.gameTimeInSeconds() < BOOTS_MIN_SECONDS) {
             return List.of();
         }
-        return factory.create(new AdviceRule(i -> i.tags().contains(ItemTag.BOOTS) && fitsBootsFor(i),
+        return factory.create(new AdviceRule(i -> i.hasTag(ItemTag.BOOTS) && fitsBootsFor(i),
                 "You have no boots yet. These suit your champion.",
                 AdvicePriority.SITUATIONAL, AdviceCategory.UTILITY), null);
     }
@@ -53,20 +53,20 @@ final class CoreItemRules {
     private boolean fitsBootsFor(Item boots) {
         return switch (me.championClass()) {
             case MARKSMAN -> boots.stats().attackSpeed() > 0;
-            case MAGE -> boots.tags().contains(ItemTag.MAGIC_PENETRATION_FLAT);
+            case MAGE -> boots.hasTag(ItemTag.MAGIC_PENETRATION_FLAT);
             default -> boots.stats().cooldownReduction() > 0;
         };
     }
 
     private Predicate<Item> classFit() {
         // boots are advised by their own rules
-        return ((Predicate<Item>) i -> !i.tags().contains(ItemTag.BOOTS)).and(switch (me.championClass()) {
+        return ((Predicate<Item>) i -> !i.hasTag(ItemTag.BOOTS)).and(switch (me.championClass()) {
             case MARKSMAN -> i -> i.stats().attackDamage() > 0 || i.stats().attackSpeed() > 0 || i.stats().criticalStrikeChance() > 0;
             case MAGE -> i -> i.stats().abilityPower() > 0;
             case TANK -> CoreItemRules::isTankItem;
             case BRUISER -> i -> (i.stats().attackDamage() > 0 && i.stats().health() > 0) || i.stats().health() >= 300;
             case ASSASSIN -> i -> me.dealsMagicDamage() ? i.stats().abilityPower() > 0 : i.stats().attackDamage() > 0;
-            case SUPPORT -> i -> i.tags().contains(ItemTag.ENCHANTER);
+            case SUPPORT -> i -> i.hasTag(ItemTag.ENCHANTER);
         });
     }
 

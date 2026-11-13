@@ -9,5 +9,17 @@ public record Item(
         ItemStats stats,
         Set<ItemTag> tags
         ) {
-}
 
+    public boolean hasTag(ItemTag tag) {
+        return tags.contains(tag);
+    }
+
+    public boolean hasAnyTag(ItemTag... candidates) {
+        for (ItemTag candidate : candidates) {
+            if (tags.contains(candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
