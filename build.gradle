@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'application'
+	id 'jacoco'
 }
 
 group = 'com.macromind'
@@ -28,4 +29,11 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy 'jacocoTestReport'
+}
+
+jacocoTestReport {
+	reports {
+		csv.required = true
+	}
 }
