@@ -57,4 +57,22 @@ class AdviceServerTest {
         assertEquals("ESTIMATED", first.get("confidence").asText());
         assertTrue(first.get("target").isNull());
     }
+
+    @Test
+    void returnsAtMostFiveAdviceEntriesCriticalFirst() throws Exception {
+        server = new AdviceServer(0);
+        List<BuildAdvice> many = new java.util.ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            many.add(new BuildAdvice(item("Rec" + i, NO_STATS), "r", AdvicePriority.RECOMMENDED,
+                    AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0));
+        }
+        many.add(new BuildAdvice(item("Crit", NO_STATS), "c", AdvicePriority.CRITICAL,
+                AdviceCategory.DEFENSIVE, null, Confidence.EXACT, 0));
+
+        server.publish(true, many);
+        JsonNode json = get();
+
+        assertEquals(5, json.get("advice").size());
+        assertEquals("Crit", json.get("advice").get(0).get("item").asText());
+    }
 }

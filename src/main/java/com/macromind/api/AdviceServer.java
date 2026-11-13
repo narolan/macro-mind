@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Serves GET /advice on loopback only. The latest result is swapped in as an immutable value. */
 public class AdviceServer {
 
+    private static final int MAX_ADVICE = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpServer server;
@@ -47,7 +48,11 @@ public class AdviceServer {
     }
 
     private static byte[] render(boolean visible, List<BuildAdvice> advice) {
-        List<Map<String, Object>> items = advice.stream().map(a -> {
+        // Rules can match most of the catalogue; the overlay only has room for the most urgent few.
+        List<Map<String, Object>> items = advice.stream()
+                .sorted(java.util.Comparator.comparing(BuildAdvice::priority))
+                .limit(MAX_ADVICE)
+                .map(a -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("item", a.recommendedItem().name());
             m.put("reasoning", a.reasoning());
