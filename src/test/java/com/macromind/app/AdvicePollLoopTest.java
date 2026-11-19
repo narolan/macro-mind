@@ -1,5 +1,6 @@
 package com.macromind.app;
 
+import com.macromind.api.AppStatus;
 import com.macromind.domain.model.*;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AdvicePollLoopTest {
 
     /** What the loop published, in order. */
-    private record Published(boolean visible, List<BuildAdvice> advice) {}
+    private record Published(boolean visible, List<BuildAdvice> advice, AppStatus status) {}
 
     private final List<Published> published = new ArrayList<>();
     private final List<String> errors = new ArrayList<>();
@@ -28,7 +29,7 @@ class AdvicePollLoopTest {
     }
 
     private AdvicePollLoop loop(java.util.function.Supplier<Optional<GameState>> poller) {
-        return new AdvicePollLoop(poller, () -> List.of(GRIEVOUS), (visible, advice) -> published.add(new Published(visible, advice)),
+        return new AdvicePollLoop(poller, () -> List.of(GRIEVOUS), (visible, advice, status) -> published.add(new Published(visible, advice, status)),
                 errors::add);
     }
 
@@ -97,7 +98,8 @@ class AdvicePollLoopTest {
 
         assertEquals(1, errors.size());
         assertTrue(errors.get(0).contains("boom"));
-        assertTrue(published.isEmpty());
+        assertEquals(List.of(AppStatus.ERROR), published.stream().map(Published::status).toList());
+        assertFalse(published.get(0).visible());
     }
 
     @Test
@@ -113,7 +115,7 @@ class AdvicePollLoopTest {
         loop.pollOnce();
         loop.pollOnce();
 
-        assertEquals(1, published.size());
+        assertEquals(List.of(AppStatus.ERROR, AppStatus.NO_GAME), published.stream().map(Published::status).toList());
     }
 
     @Test
@@ -121,12 +123,53 @@ class AdvicePollLoopTest {
         List<List<Item>> catalogues = List.of(List.of(), List.of(GRIEVOUS));
         AtomicInteger next = new AtomicInteger();
         AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(soraka(1000, true)),
-                () -> catalogues.get(next.getAndIncrement()), (visible, advice) -> published.add(new Published(visible, advice)), errors::add);
+                () -> catalogues.get(next.getAndIncrement()), (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
 
         loop.pollOnce();
         loop.pollOnce();
 
         assertTrue(published.get(0).advice().isEmpty());
         assertFalse(published.get(1).advice().isEmpty());
+    }
+
+    @Test
+    void reportsNoGameAsNoGameAndAMatchAsInGame() {
+        List<Optional<GameState>> polls = List.of(Optional.empty(), Optional.of(soraka(1000, false)));
+        AtomicInteger next = new AtomicInteger();
+        AdvicePollLoop loop = loop(() -> polls.get(next.getAndIncrement()));
+
+        loop.pollOnce();
+        loop.pollOnce();
+
+        assertEquals(List.of(AppStatus.NO_GAME, AppStatus.IN_GAME), published.stream().map(Published::status).toList());
+    }
+
+    @Test
+    void reportsNoDataWhenTheItemCatalogueIsEmptyAndDoesNotEvenPollTheGame() {
+        AtomicInteger polls = new AtomicInteger();
+        AdvicePollLoop loop = new AdvicePollLoop(() -> { polls.incrementAndGet(); return Optional.of(soraka(1000, true)); },
+                List::of, (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
+
+        loop.pollOnce();
+
+        assertEquals(List.of(AppStatus.NO_DATA), published.stream().map(Published::status).toList());
+        assertFalse(published.get(0).visible());
+        assertEquals(0, polls.get());
+    }
+
+    @Test
+    void recoversToInGameAfterAnError() {
+        AtomicInteger calls = new AtomicInteger();
+        AdvicePollLoop loop = loop(() -> {
+            if (calls.getAndIncrement() == 0) {
+                throw new IllegalStateException("boom");
+            }
+            return Optional.of(soraka(1000, true));
+        });
+
+        loop.pollOnce();
+        loop.pollOnce();
+
+        assertEquals(List.of(AppStatus.ERROR, AppStatus.IN_GAME), published.stream().map(Published::status).toList());
     }
 }

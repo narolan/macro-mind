@@ -51,7 +51,7 @@ class AdviceContractTest {
 
         JsonNode json = fetch();
 
-        assertEquals(Set.of("visible", "advice", "iconVersion"), fieldNames(json));
+        assertEquals(Set.of("visible", "advice", "iconVersion", "status"), fieldNames(json));
         assertTrue(json.get("visible").isBoolean());
         assertTrue(json.get("advice").isArray());
         assertTrue(json.get("iconVersion").isTextual());
@@ -104,7 +104,7 @@ class AdviceContractTest {
                 HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/advice")).build(),
                 HttpResponse.BodyHandlers.ofString());
 
-        assertTrue(response.body().startsWith("{\"visible\":false,\"advice\":[],\"iconVersion\":\"16.22.1\"}"), response.body());
+        assertTrue(response.body().startsWith("{\"visible\":false,\"advice\":[],\"iconVersion\":\"16.22.1\",\"status\":\"NO_GAME\"}"), response.body());
     }
 
     @Test
@@ -116,5 +116,30 @@ class AdviceContractTest {
                 HttpResponse.BodyHandlers.ofString());
 
         assertEquals(200, response.statusCode());
+    }
+
+    @Test
+    void statusIsSentAsItsNameAndStartsAsNoGame() throws Exception {
+        server = new AdviceServer(0);
+
+        assertEquals("NO_GAME", fetch().get("status").asText());
+    }
+
+    @Test
+    void everyStatusRoundTripsThroughThePayload() throws Exception {
+        server = new AdviceServer(0);
+        for (AppStatus status : AppStatus.values()) {
+            server.publish(false, List.of(), status);
+
+            assertEquals(status.name(), fetch().get("status").asText());
+        }
+    }
+
+    @Test
+    void publishingWithoutAStatusMeansInGame() throws Exception {
+        server = new AdviceServer(0);
+        server.publish(true, List.of());
+
+        assertEquals("IN_GAME", fetch().get("status").asText());
     }
 }

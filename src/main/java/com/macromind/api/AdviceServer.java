@@ -39,7 +39,7 @@ public final class AdviceServer {
 
     public AdviceServer(int port, String iconVersion) throws IOException {
         this.iconVersion = iconVersion;
-        this.latest = new AtomicReference<>(render(false, List.of()));
+        this.latest = new AtomicReference<>(render(false, List.of(), AppStatus.NO_GAME));
         this.server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         this.allowedHosts = Set.of("127.0.0.1:" + port(), "localhost:" + port());
         server.createContext("/advice", this::handleAdvice);
@@ -50,8 +50,13 @@ public final class AdviceServer {
         return server.getAddress().getPort();
     }
 
+    /** Convenience for callers that only know about advice: the app is then, by definition, in a game. */
     public void publish(boolean visible, List<BuildAdvice> advice) {
-        latest.set(render(visible, advice));
+        publish(visible, advice, AppStatus.IN_GAME);
+    }
+
+    public void publish(boolean visible, List<BuildAdvice> advice, AppStatus status) {
+        latest.set(render(visible, advice, status));
     }
 
     public void stop() {
@@ -76,9 +81,9 @@ public final class AdviceServer {
         }
     }
 
-    private byte[] render(boolean visible, List<BuildAdvice> advice) {
+    private byte[] render(boolean visible, List<BuildAdvice> advice, AppStatus status) {
         try {
-            return JSON.writeValueAsString(AdvicePayload.of(visible, advice, iconVersion)).getBytes(StandardCharsets.UTF_8);
+            return JSON.writeValueAsString(AdvicePayload.of(visible, advice, iconVersion, status)).getBytes(StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not serialize the advice payload", e);
         }
