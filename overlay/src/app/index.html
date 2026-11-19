@@ -22,6 +22,7 @@
     <main class="stage-area">
       <section role="tabpanel" id="panel-status" aria-labelledby="tab-status" class="panel">
         <ol class="stages" id="stages" aria-label="What MacroMind is doing">
+          <li data-stage="problem" hidden><span class="node" aria-hidden="true"></span><span class="stage-name">Problem</span></li>
           <li data-stage="starting"><span class="node" aria-hidden="true"></span><span class="stage-name">Starting</span></li>
           <li data-stage="waiting"><span class="node" aria-hidden="true"></span><span class="stage-name">Waiting for a game</span></li>
           <li data-stage="in-game"><span class="node" aria-hidden="true"></span><span class="stage-name">In game</span></li>
@@ -32,7 +33,7 @@
           <p id="state-detail">MacroMind is starting up. This takes a few seconds.</p>
         </div>
 
-        <section class="advice" aria-labelledby="advice-heading">
+        <section class="advice" id="advice" aria-labelledby="advice-heading">
           <h2 id="advice-heading">On your screen now</h2>
           <ul id="advice-list" class="advice-list"></ul>
           <p id="advice-empty" class="empty">Nothing to show. When a match is running, advice appears here and on the overlay.</p>

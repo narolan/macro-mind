@@ -38,6 +38,10 @@ function renderStages(line, tone) {
   const list = $('stages');
   list.dataset.tone = tone;
   list.dataset.problem = String(line.problem);
+  // a problem is not a stage: it gets its own square node at the head of the line and lights nothing else
+  const problem = list.querySelector('[data-stage="problem"]');
+  problem.hidden = !line.problem;
+  if (line.problem) problem.setAttribute('aria-current', 'step'); else problem.removeAttribute('aria-current');
   for (const stage of line.stages) {
     const item = list.querySelector(`[data-stage="${stage.id}"]`);
     if (stage.current) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
@@ -75,6 +79,7 @@ function renderStatus(status) {
   $('state').dataset.tone = view.tone;
   renderStages(status.stageLine, view.tone);
   renderAdvice(status.rows);
+  $('advice').hidden = status.stageLine.problem; // no advice list next to a problem: an empty list would read as "all fine"
   $('data-version').textContent = view.dataVersion ? `Item data: patch ${view.dataVersion}` : 'Item data: not loaded yet';
 }
 
