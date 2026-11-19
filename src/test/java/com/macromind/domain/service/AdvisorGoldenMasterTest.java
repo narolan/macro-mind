@@ -111,11 +111,8 @@ class AdvisorGoldenMasterTest {
 
         assertEquals(List.of(
             "R|D|Mercury's Treads|Enemy team has heavy AP threat. Co|Syndra|E",
-            "R|D|Thornmail|Enemy team has heavy AP threat. Co|Syndra|E",
             "R|D|Warmog's Armor|Enemy team has heavy AP threat. Co|Syndra|E",
-            "R|D|Banshee's Veil|Enemy team has heavy AP threat. Co|Syndra|E",
-            "R|D|Liandry's Torment|Enemy team has heavy AP threat. Co|Syndra|E",
-            "R|D|Mercurial Scimitar|Enemy team has heavy AP threat. Co|Syndra|E"),
+            "S|D|Thornmail|Nothing urgent to counter. This it|-|E"),
                 digest(state));
     }
 
@@ -133,10 +130,10 @@ class AdvisorGoldenMasterTest {
                 digest(state));
     }
 
-    /** KNOWN QUIRK, pinned as-is: the boots rule claims "mixed enemy damage" even when there are no enemies. */
+    /** With no enemies there is no enemy damage to react to: only the generic "no boots yet" hint remains. */
     @Test
-    void emptyEnemyTeamStillGetsABootsSuggestion() {
-        assertEquals(List.of("R|O|Berserker's Greaves|You have no boots and the enemy da|-|E"),
+    void emptyEnemyTeamOnlyGetsTheGenericBootsHint() {
+        assertEquals(List.of("S|U|Berserker's Greaves|You have no boots yet. These suit |-|E"),
                 digest(gameAt(1500, me(ChampionClass.MARKSMAN, 200, 0, 40, 40, 1800, 3500), List.of())));
     }
 }

@@ -195,4 +195,13 @@ class CompositionRulesTest {
     void doesNotAdviseCleanseWithoutHeavyCrowdControl() {
         assertTrue(advise(900, ADC, List.of(enemy("Leona", ChampionClass.TANK), enemy("Zed", ChampionClass.ASSASSIN)), QSS).isEmpty());
     }
+
+    @Test
+    void doesNotClaimToKnowTheEnemyDamageWhenThereAreNoEnemies() {
+        Item penBoots = itemWith("Sorcerer's Shoes", 1100, itemStats(0, 0, 0, 0, 0, 0, 12, 0, 0), ItemTag.BOOTS, ItemTag.MAGIC_PENETRATION_FLAT);
+        Item asBoots = itemWith("Berserker's Greaves", 1100, new ItemStats(0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0), ItemTag.BOOTS);
+
+        assertTrue(advise(900, MAGE, List.of(), penBoots, asBoots).isEmpty());
+        assertTrue(advise(900, ADC, List.of(), penBoots, asBoots).isEmpty());
+    }
 }

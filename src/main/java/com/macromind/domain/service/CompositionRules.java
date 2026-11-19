@@ -39,7 +39,8 @@ final class CompositionRules {
     }
 
     private List<BuildAdvice> boots() {
-        if (me.hasBoots() || gameState.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
+        if (me.hasBoots() || gameState.enemies().isEmpty()
+                || gameState.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
             return List.of();
         }
         double adRatio = threat.adRatio();

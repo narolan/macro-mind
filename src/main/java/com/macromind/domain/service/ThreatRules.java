@@ -124,7 +124,7 @@ final class ThreatRules {
                     ? factory.create(item -> givesMageStats(item) && blocksBurst.test(item),
                             reasoning, AdvicePriority.CRITICAL, AdviceCategory.DEFENSIVE, target)
                     : List.of();
-            case TANK -> factory.create(item -> item.stats().health() > 0 || resist.test(item),
+            case TANK -> factory.create(item -> ItemFit.isTankItem(item) && (resist.test(item) || ItemFit.hasNoResist(item)),
                     reasoning, AdvicePriority.RECOMMENDED, AdviceCategory.DEFENSIVE, target);
             case BRUISER -> squishy
                     ? factory.create(item -> resist.test(item) && (item.stats().health() > 0

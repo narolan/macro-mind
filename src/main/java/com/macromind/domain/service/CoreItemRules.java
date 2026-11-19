@@ -62,18 +62,11 @@ final class CoreItemRules {
         return ((Predicate<Item>) i -> !i.hasTag(ItemTag.BOOTS)).and(switch (me.championClass()) {
             case MARKSMAN -> ItemFit::givesPhysicalDamage;
             case MAGE -> ItemFit::givesAbilityPower;
-            case TANK -> CoreItemRules::isTankItem;
+            case TANK -> ItemFit::isTankItem;
             case BRUISER -> i -> (i.stats().attackDamage() > 0 && i.stats().health() > 0) || i.stats().health() >= 300;
             case ASSASSIN -> i -> me.dealsMagicDamage() ? i.stats().abilityPower() > 0 : i.stats().attackDamage() > 0;
             case SUPPORT -> i -> i.hasTag(ItemTag.ENCHANTER);
         });
-    }
-
-    /** Durable items whose damage does not outweigh their resistances (so a damage item with some health is not a tank item). */
-    private static boolean isTankItem(Item item) {
-        ItemStats s = item.stats();
-        boolean durable = s.health() >= 300 || s.armor() > 0 || s.magicResist() > 0;
-        return durable && s.attackDamage() + s.abilityPower() <= s.armor() + s.magicResist();
     }
 
     private String reasoning() {

@@ -53,9 +53,11 @@ class ThreatRulesTest {
 
     @Test
     void tankVsAdAdvisesArmorOrHealthAsRecommended() {
-        List<BuildAdvice> advice = advise(ChampionClass.TANK, SQUISHY, AD_ENEMY, AD_ARMOR, AD_MR);
+        Item sunfire = item("Sunfire Aegis", itemStats(0, 0, 50, 0, 400, 0, 0, 0, 0));
 
-        assertEquals(List.of("Death's Dance"), names(advice));
+        List<BuildAdvice> advice = advise(ChampionClass.TANK, SQUISHY, AD_ENEMY, sunfire, AD_ARMOR, AD_MR);
+
+        assertEquals(List.of("Sunfire Aegis"), names(advice), "a damage item with some armor is not a tank item");
         assertEquals(AdvicePriority.RECOMMENDED, advice.get(0).priority());
     }
 
@@ -126,5 +128,30 @@ class ThreatRulesTest {
         assertEquals(AdvicePriority.CRITICAL,
                 new BuildAdvisor(game(withoutGw, List.of(soraka)), List.of(morello)).generateBuildAdvices().get(0).priority());
         assertTrue(new BuildAdvisor(game(withGw, List.of(soraka)), List.of(morello)).generateBuildAdvices().isEmpty());
+    }
+
+    @Test
+    void tankIsNotSentAbilityPowerDamageItemsJustBecauseTheyCarrySomeHealth() {
+        Item liandrys = item("Liandry's Torment", itemStats(0, 90, 0, 0, 300, 0, 0, 0, 0), ItemTag.PERCENT_HEALTH_DAMAGE);
+        Item warmogs = item("Warmog's Armor", itemStats(0, 0, 0, 0, 1000, 0, 0, 0, 0));
+
+        assertEquals(List.of("Warmog's Armor"), names(advise(ChampionClass.TANK, SQUISHY, AP_ENEMY, liandrys, warmogs)));
+    }
+
+    @Test
+    void tankIsNotSentAttackDamageItemsJustBecauseTheyCarrySomeResist() {
+        Item deathsDance = item("Death's Dance", itemStats(60, 0, 40, 0, 0, 0, 0, 0, 0));
+        Item thornmail = item("Thornmail", itemStats(0, 0, 75, 0, 150, 0, 0, 0, 0));
+
+        assertEquals(List.of("Thornmail"), names(advise(ChampionClass.TANK, SQUISHY, AD_ENEMY, deathsDance, thornmail)));
+    }
+
+    @Test
+    void tankStillGetsItemsThatAreMostlyDefence() {
+        Item sunfire = item("Sunfire Aegis", itemStats(0, 0, 50, 0, 400, 0, 0, 0, 0));
+        Item forceOfNature = item("Force of Nature", itemStats(0, 0, 0, 80, 400, 0, 0, 0, 0));
+
+        assertEquals(List.of("Sunfire Aegis"), names(advise(ChampionClass.TANK, SQUISHY, AD_ENEMY, sunfire, forceOfNature)));
+        assertEquals(List.of("Force of Nature"), names(advise(ChampionClass.TANK, SQUISHY, AP_ENEMY, sunfire, forceOfNature)));
     }
 }
