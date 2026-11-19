@@ -80,12 +80,26 @@ function groupRows(rows) {
  * @returns {ViewModel}
  */
 function toViewModel(payload) {
-  if (!payload || payload.visible !== true || !Array.isArray(payload.advice)) {
+  if (!payload || payload.visible !== true) {
     return HIDDEN_VIEW;
   }
-  const rows = payload.advice.filter(hasItemName).map((advice) => toRowContent(advice, payload.iconVersion));
-  const shown = groupRows(rows).slice(0, MAX_ROWS).map((content) => ({ ...content, key: rowKey(content) }));
+  const shown = toRows(payload, MAX_ROWS);
   return shown.length === 0 ? HIDDEN_VIEW : { visible: true, rows: shown };
+}
+
+/**
+ * The advice in a payload as merged rows, at most maxRows of them. Unlike toViewModel it ignores payload.visible, which
+ * says whether the overlay should show, not whether there is advice. Never throws.
+ * @param {unknown} payload
+ * @param {number} maxRows
+ * @returns {Row[]}
+ */
+function toRows(payload, maxRows) {
+  if (!payload || !Array.isArray(payload.advice)) {
+    return [];
+  }
+  const rows = payload.advice.filter(hasItemName).map((advice) => toRowContent(advice, payload.iconVersion));
+  return groupRows(rows).slice(0, maxRows).map((content) => ({ ...content, key: rowKey(content) }));
 }
 
 /**
@@ -97,4 +111,4 @@ function viewKey(viewModel) {
   return viewModel.visible ? viewModel.rows.map((row) => row.key).join('\n') : '';
 }
 
-module.exports = { toViewModel, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };
+module.exports = { toViewModel, toRows, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };

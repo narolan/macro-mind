@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src https://ddragon.leagueoflegends.com data:; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MacroMind</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="shell">
+    <nav class="rail" aria-label="Sections">
+      <p class="brand">MacroMind</p>
+      <ul role="tablist" class="tabs">
+        <li><button role="tab" id="tab-status" aria-controls="panel-status" aria-selected="true">Status</button></li>
+        <li><button role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false" tabindex="-1">How it works</button></li>
+        <li><button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button></li>
+      </ul>
+      <p class="rail-note" id="data-version">Item data: not loaded yet</p>
+    </nav>
+
+    <main class="stage-area">
+      <section role="tabpanel" id="panel-status" aria-labelledby="tab-status" class="panel">
+        <ol class="stages" id="stages" aria-label="What MacroMind is doing">
+          <li data-stage="starting"><span class="node" aria-hidden="true"></span><span class="stage-name">Starting</span></li>
+          <li data-stage="waiting"><span class="node" aria-hidden="true"></span><span class="stage-name">Waiting for a game</span></li>
+          <li data-stage="in-game"><span class="node" aria-hidden="true"></span><span class="stage-name">In game</span></li>
+        </ol>
+
+        <div class="state" id="state" data-tone="warn" aria-live="polite">
+          <h1 id="state-title">Starting…</h1>
+          <p id="state-detail">MacroMind is starting up. This takes a few seconds.</p>
+        </div>
+
+        <section class="advice" aria-labelledby="advice-heading">
+          <h2 id="advice-heading">On your screen now</h2>
+          <ul id="advice-list" class="advice-list"></ul>
+          <p id="advice-empty" class="empty">Nothing to show. When a match is running, advice appears here and on the overlay.</p>
+        </section>
+      </section>
+
+      <section role="tabpanel" id="panel-how" aria-labelledby="tab-how" class="panel prose" hidden>
+        <h1>How it works</h1>
+        <p>While a League match is running, MacroMind reads the game's own local data once a second. It never touches the game files and never sends anything over the internet except one download of Riot's public item list.</p>
+        <p>Your own stats are exact. The game does not share enemy armor, magic resist or health, so MacroMind estimates them from each champion's base stats, their level and the items they are carrying. Advice that depends on those numbers is marked <span class="est">est.</span></p>
+        <p>The advice comes from plain rules: for example, heavy enemy healing suggests an item that cuts healing. Each suggestion shows its reason. It is a nudge, not an order, and the rules are first guesses.</p>
+        <p class="legal">MacroMind is unofficial and is not endorsed by Riot Games. League of Legends is a trademark of Riot Games, Inc.</p>
+      </section>
+
+      <section role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" class="panel" hidden>
+        <h1>Settings</h1>
+        <form id="settings" class="settings" autocomplete="off">
+          <div class="field">
+            <div class="field-text">
+              <label for="overlayEnabled">Show the overlay in games</label>
+              <p id="overlayEnabled-help">Turn this off to keep MacroMind running without drawing on screen.</p>
+            </div>
+            <input type="checkbox" role="switch" id="overlayEnabled" aria-describedby="overlayEnabled-help">
+          </div>
+
+          <div class="field">
+            <div class="field-text">
+              <label for="corner">Overlay position</label>
+              <p id="corner-help">Which corner of your main screen the advice sits in.</p>
+            </div>
+            <select id="corner" aria-describedby="corner-help">
+              <option value="top-right">Top right</option>
+              <option value="top-left">Top left</option>
+              <option value="bottom-right">Bottom right</option>
+              <option value="bottom-left">Bottom left</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div class="field-text">
+              <label for="opacity">Overlay opacity</label>
+              <p id="opacity-help">Lower is more see-through. It cannot go below 20% so it stays readable.</p>
+            </div>
+            <div class="range-wrap">
+              <input type="range" id="opacity" min="20" max="100" step="5" aria-describedby="opacity-help">
+              <output id="opacity-value" for="opacity">100%</output>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-text">
+              <label for="startWithWindows">Start with Windows</label>
+              <p id="startWithWindows-help">MacroMind opens quietly in the tray when you sign in.</p>
+            </div>
+            <input type="checkbox" role="switch" id="startWithWindows" aria-describedby="startWithWindows-help">
+          </div>
+        </form>
+        <p class="saved" id="saved" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
