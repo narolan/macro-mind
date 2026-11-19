@@ -27,3 +27,7 @@ HELP.md
 mise.local.toml
 .mise.local.toml
 .superpowers/
+
+# Packaging output (overlay)
+overlay/build/
+overlay/dist/

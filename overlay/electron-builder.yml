@@ -1,0 +1,19 @@
+appId: com.macromind.app
+productName: MacroMind
+asar: true
+directories:
+  output: dist
+files:
+  - src/**
+  - package.json
+extraResources:
+  - from: build/backend/runtime
+    to: backend/runtime
+  - from: build/backend/lib
+    to: backend/lib
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  perMachine: false
+  artifactName: MacroMind-Setup.${ext}

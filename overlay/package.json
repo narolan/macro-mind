@@ -6,10 +6,14 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test ./test/*.js"
+    "test": "node --test ./test/*.js",
+    "prepare:backend": "node scripts/prepare-backend.js",
+    "dist:win": "npm run prepare:backend && electron-builder --win nsis",
+    "dist:dir": "npm run prepare:backend && electron-builder --dir"
   },
   "devDependencies": {
-    "electron": "^45.3.2"
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
   },
   "engines": {
     "node": ">=22.12.0"
