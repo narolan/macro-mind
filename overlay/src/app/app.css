@@ -4,6 +4,7 @@
   --ink: #0f181c;
   --ink-raised: #16232a;
   --ink-rail: #0b1215;
+  --hex-glow: #1f8fa3; /* hextech blue, background glow only */
   --line: #243540;
   --line-strong: #5d727c; /* controls and unlit nodes: >=3:1 on --ink */
   --bone: #ece6d6;
@@ -83,7 +84,28 @@ ul, ol { list-style: none; }
 
 .rail-note { margin-top: auto; padding: 0 0.5rem; color: var(--bone-dim); font-size: var(--step--1); font-variant-numeric: tabular-nums; }
 
-.stage-area { padding: 2rem 2.5rem 3rem; min-width: 0; }
+.stage-area {
+  padding: 2rem 2.5rem 3rem;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(80rem 40rem at 105% -8%, color-mix(in srgb, var(--hex-glow) 34%, transparent), transparent 70%),
+    radial-gradient(40rem 24rem at -10% 110%, color-mix(in srgb, var(--brass) 14%, transparent), transparent 70%),
+    var(--ink);
+}
+/* Hextech lattice: brass hairlines, strongest in the top-right corner, fading before it reaches the text column */
+.stage-area::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31ZM28 63v33M1 47.5 -27 63M55 47.5 83 63' fill='none' stroke='%23c8a25e' stroke-width='1'/%3E%3C/svg%3E") 0 0 / 56px 97px;
+  opacity: 0.2;
+  -webkit-mask-image: radial-gradient(60rem 38rem at 100% 0%, #000, transparent 80%);
+  mask-image: radial-gradient(60rem 38rem at 100% 0%, #000, transparent 80%);
+}
 .panel { max-width: 40rem; }
 .panel[hidden] { display: none; }
 
