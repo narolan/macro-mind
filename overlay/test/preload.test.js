@@ -40,10 +40,10 @@ test('overlay preload: forwards view models from the view-model channel without 
   assert.deepEqual(received, [{ visible: true }]);
 });
 
-test('app preload: exposes exactly the four calls the window needs under window.macromindApp', () => {
+test('app preload: exposes exactly the calls the window needs under window.macromindApp', () => {
   const { exposed } = load('../src/appPreload');
   assert.deepEqual(Object.keys(exposed), ['macromindApp']);
-  assert.deepEqual(Object.keys(exposed.macromindApp).sort(), ['getSettings', 'getStatus', 'onStatus', 'saveSettings']);
+  assert.deepEqual(Object.keys(exposed.macromindApp).sort(), ['getSettings', 'getStatus', 'getVersion', 'onStatus', 'previewOverlay', 'saveSettings']);
 });
 
 test('app preload: getSettings and getStatus ask the main process and return its answer', async () => {

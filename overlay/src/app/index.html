@@ -16,7 +16,7 @@
         <li><button role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false" tabindex="-1">How it works</button></li>
         <li><button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button></li>
       </ul>
-      <p class="rail-note" id="data-version">Item data: not loaded yet</p>
+      <p class="rail-note"><span id="app-version">MacroMind</span><br><span id="data-version">Item data: not loaded yet</span></p>
     </nav>
 
     <main class="stage-area">
@@ -91,6 +91,10 @@
             <input type="checkbox" role="switch" id="startWithWindows" aria-describedby="startWithWindows-help">
           </div>
         </form>
+        <div class="preview">
+          <button type="button" id="preview" class="button">Preview the overlay</button>
+          <p id="preview-help">Shows sample advice for a few seconds with your position and opacity, even when the overlay is switched off.</p>
+        </div>
         <p class="saved" id="saved" role="status" aria-live="polite"></p>
       </section>
     </main>

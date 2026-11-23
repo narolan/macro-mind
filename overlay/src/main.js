@@ -10,6 +10,8 @@ const { overlayBounds } = require('./layout');
 const { trayIconBitmap } = require('./trayIcon');
 const { buildStatus } = require('./statusModel');
 const { startAutoUpdate } = require('./updater');
+const { PREVIEW_VIEW, PREVIEW_MS } = require('./previewView');
+const { HIDDEN_VIEW } = require('./viewModel');
 
 const PORT = process.env.MACROMIND_PORT || '8765';
 const ADVICE_URL = process.env.MACROMIND_URL || `http://127.0.0.1:${PORT}/advice`;
@@ -35,6 +37,8 @@ let currentStatus = null;
 let lastStatusJson = null;
 let lastTone = null;
 let lastOverlayVisible = false;
+let lastView = HIDDEN_VIEW; // the real view, restored when a preview ends
+let previewTimer = null;
 let isQuitting = false;
 const startedAt = Date.now();
 
@@ -101,7 +105,7 @@ function applyOverlaySettings() {
 
 function syncOverlayVisibility() {
   if (!overlay || overlay.isDestroyed()) return;
-  const visible = settings.overlayEnabled && lastOverlayVisible;
+  const visible = previewTimer !== null || (settings.overlayEnabled && lastOverlayVisible);
   if (visible && !overlay.isVisible()) overlay.showInactive();
   if (!visible && overlay.isVisible()) overlay.hide();
   if (visible && !raiseTimer) raiseTimer = setInterval(raiseOverlay, RAISE_INTERVAL_MS);
@@ -117,8 +121,22 @@ function raiseOverlay() {
 
 function showOverlayView(view) {
   if (!overlay || overlay.isDestroyed()) return;
-  overlay.webContents.send(VIEW_MODEL_CHANNEL, view);
+  lastView = view;
   lastOverlayVisible = view.visible;
+  if (previewTimer === null) overlay.webContents.send(VIEW_MODEL_CHANNEL, view); // a preview keeps the screen until it ends
+  syncOverlayVisibility();
+}
+
+// Shows sample advice in the real overlay window, so the user sees their corner and opacity settings at work.
+function previewOverlay() {
+  if (!overlay || overlay.isDestroyed()) return;
+  clearTimeout(previewTimer);
+  overlay.webContents.send(VIEW_MODEL_CHANNEL, PREVIEW_VIEW);
+  previewTimer = setTimeout(() => {
+    previewTimer = null;
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, lastView);
+    syncOverlayVisibility();
+  }, PREVIEW_MS);
   syncOverlayVisibility();
 }
 
@@ -218,6 +236,8 @@ function registerIpc() {
   handle('app:get-settings', () => settings);
   handle('app:save-settings', (raw) => applySettings(raw));
   handle('app:get-status', () => currentStatus);
+  handle('app:get-version', () => app.getVersion());
+  handle('app:preview-overlay', () => { previewOverlay(); });
 }
 
 async function quit() {

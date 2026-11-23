@@ -119,7 +119,10 @@ async function save() {
 Object.values(controls).forEach((control) => control.addEventListener('change', save));
 controls.opacity.addEventListener('input', () => { $('opacity-value').textContent = `${controls.opacity.value}%`; });
 
+$('preview').addEventListener('click', () => { api.previewOverlay().catch(() => {}); });
+
 // ---- start ----
+api.getVersion().then((version) => { if (version) $('app-version').textContent = `MacroMind v${version}`; }).catch(() => {});
 api.onStatus(renderStatus);
 api.getStatus().then(renderStatus).catch(() => {});
 api.getSettings().then(showControls).catch(() => {});
