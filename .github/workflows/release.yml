@@ -31,4 +31,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: overlay/dist/*.exe
+          files: |
+            overlay/dist/*.exe
+            overlay/dist/*.exe.blockmap
+            overlay/dist/latest.yml

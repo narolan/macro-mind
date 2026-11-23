@@ -17,3 +17,7 @@ nsis:
   createDesktopShortcut: true
   perMachine: false
   artifactName: MacroMind-Setup.${ext}
+publish:
+  provider: github
+  owner: narolan
+  repo: macro-mind

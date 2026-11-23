@@ -9,6 +9,7 @@ const { loadSettings, saveSettings, normalize } = require('./settings');
 const { overlayBounds } = require('./layout');
 const { trayIconBitmap } = require('./trayIcon');
 const { buildStatus } = require('./statusModel');
+const { startAutoUpdate } = require('./updater');
 
 const PORT = process.env.MACROMIND_PORT || '8765';
 const ADVICE_URL = process.env.MACROMIND_URL || `http://127.0.0.1:${PORT}/advice`;
@@ -257,5 +258,6 @@ if (!app.requestSingleInstanceLock()) {
       });
     });
     startStatusLoop();
+    if (app.isPackaged) startAutoUpdate({ updater: require('electron-updater').autoUpdater, log }); // dev runs have no release to compare with
   }).catch((error) => log(`startup failed: ${error && error.stack || error}`));
 }

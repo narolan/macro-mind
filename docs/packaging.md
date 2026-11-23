@@ -25,5 +25,5 @@ Staged: runtime about 86 MB (macOS arm64), jars about 2.3 MB. Electron adds abou
 
 - Not yet built or tested on Windows.
 - The installer is unsigned, so Windows SmartScreen will warn.
-- No auto-update.
+- Auto-update (electron-updater) reads GitHub Releases of `narolan/macro-mind` and needs the release to be public. It checks at start and every 4 hours, downloads in the background and installs on quit. The release version comes from `overlay/package.json`, so bump it to match the `v*` tag before tagging. Untested on Windows; unsigned installers may make updates trip SmartScreen.
 - No custom icon (none exists); the default Electron icon is used.
