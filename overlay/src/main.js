@@ -17,6 +17,8 @@ const VIEW_MODEL_CHANNEL = 'view-model'; // must match the channel preload.js li
 const WINDOW_WIDTH = 380;
 const WINDOW_HEIGHT = 340;
 const SCREEN_EDGE_MARGIN = 24;
+const RAISE_INTERVAL_MS = 1000;
+let raiseTimer = null;
 const ALWAYS_ON_TOP_LEVEL = 'screen-saver'; // keeps the overlay above full-screen games
 const TRAY_ICON_SIZE = 16;
 const HIDDEN_FLAG = '--hidden';
@@ -101,6 +103,15 @@ function syncOverlayVisibility() {
   const visible = settings.overlayEnabled && lastOverlayVisible;
   if (visible && !overlay.isVisible()) overlay.showInactive();
   if (!visible && overlay.isVisible()) overlay.hide();
+  if (visible && !raiseTimer) raiseTimer = setInterval(raiseOverlay, RAISE_INTERVAL_MS);
+  if (!visible && raiseTimer) { clearInterval(raiseTimer); raiseTimer = null; }
+}
+
+// The game window can re-take the top of the z-order when it is clicked; re-assert ours.
+function raiseOverlay() {
+  if (!overlay || overlay.isDestroyed() || !overlay.isVisible()) return;
+  overlay.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+  overlay.moveTop();
 }
 
 function showOverlayView(view) {
