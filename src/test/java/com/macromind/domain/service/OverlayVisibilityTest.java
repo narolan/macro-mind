@@ -81,4 +81,33 @@ class OverlayVisibilityTest {
         assertEquals(List.of(alert), OverlayVisibility.freshAlerts(state(true, 130), List.of(alert), seen));
         assertEquals(5L, OverlayVisibility.trackAlerts(seen, List.of(alert), 5).get("k"));
     }
+
+    @Test
+    void forDisplayKeepsOnlyCriticalWhileAlive() {
+        BuildAdvice critical = advice(AdvicePriority.CRITICAL);
+        List<BuildAdvice> all = List.of(advice(AdvicePriority.SITUATIONAL), critical, advice(AdvicePriority.RECOMMENDED));
+
+        assertEquals(List.of(critical), OverlayVisibility.forDisplay(state(false, 100), all));
+    }
+
+    @Test
+    void forDisplayKeepsEverythingWhileDead() {
+        List<BuildAdvice> all = List.of(advice(AdvicePriority.SITUATIONAL), advice(AdvicePriority.CRITICAL));
+
+        assertEquals(all, OverlayVisibility.forDisplay(state(true, 100), all));
+    }
+
+    @Test
+    void forDisplayIsEmptyWhenAliveWithoutCritical() {
+        assertTrue(OverlayVisibility.forDisplay(state(false, 100), List.of(advice(AdvicePriority.RECOMMENDED))).isEmpty());
+    }
+
+    @Test
+    void criticalIsStillShownAtTheLastSecondOfItsWindow() {
+        List<BuildAdvice> shown = List.of(advice(AdvicePriority.CRITICAL));
+        Map<Integer, Long> seen = OverlayVisibility.track(Map.of(), shown, 100);
+
+        assertTrue(OverlayVisibility.shouldShow(state(false, 120), shown, seen));
+        assertFalse(OverlayVisibility.shouldShow(state(false, 121), shown, seen));
+    }
 }

@@ -10,7 +10,10 @@ import java.util.List;
 public final class AlertAdvisor {
 
     /** One line per rule. */
-    public static final List<AlertRule> RULES = List.of();
+    public static final List<AlertRule> RULES = List.of(
+            new BuyNowRule(),
+            new SpikeRule(),
+            new DamageMixRule());
 
     private AlertAdvisor() {}
 

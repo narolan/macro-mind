@@ -28,8 +28,9 @@ cd overlay && npm install && npm start     # overlay, in a second terminal
 
 The first backend start downloads Riot's static item data into `~/.macromind/cache`; later starts work offline.
 With no game running, `/advice` answers `{"visible":false,"advice":[],...,"alerts":[],"timers":[]}` and the overlay stays hidden.
+While you are alive the payload carries only CRITICAL advice; when you are dead it carries everything (see `docs/live-client-api.md`).
 
-Besides `advice`, the payload carries `alerts` (`[{kind, message, priority}]`, shown only while fresh, about 20 s, or while you are dead) and `timers` (`[{name, secondsLeft}]`, only for objectives 1 to 30 s away). The overlay beeps (a synthesized tone, switch it off under Settings > Sound cues) when a critical row or any alert appears that was not in the previous view; unchanged views and the first view after start never beep. New alert rules go in `AlertAdvisor.RULES`; the overlay reads both in `overlay/src/viewModel.js`.
+Besides `advice`, the payload carries `alerts` (`[{kind, message, priority}]`, shown only while fresh, about 20 s, or while you are dead) and `timers` (`[{name, secondsLeft}]`, only for Dragon, Baron and Rift Herald 1 to 30 s from spawning, see `ObjectiveSchedule`). The buy-now nudge (`BuyNowRule`) alerts when your current gold covers the top critical or recommended item. `SpikeRule` warns when the most dangerous living enemy hits level 6, 11 or 16 or has completed big items (at most 2 per poll). `DamageMixRule` warns when the enemy team is mostly AD or AP and you own no matching armor or magic resist. New alert rules go in `AlertAdvisor.RULES`; the overlay reads both in `overlay/src/viewModel.js`. The overlay beeps (a synthesized tone, switch it off under Settings > Sound cues) when a critical row or any alert appears that was not in the previous view; unchanged views and the first view after start never beep.
 
 ## Configuration
 

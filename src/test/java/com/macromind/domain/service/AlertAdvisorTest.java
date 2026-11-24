@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AlertAdvisorTest {
 
     @Test
-    void registersNoRulesYetSoNothingIsAlerted() {
+    void staysQuietWhenNoRuleApplies() {
         assertEquals(List.of(), AlertAdvisor.alerts(game(player("Me", com.macromind.domain.model.ChampionClass.MAGE, false, List.of(), AVERAGE_STATS), List.of()), List.of()));
     }
 

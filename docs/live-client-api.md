@@ -34,4 +34,21 @@ of the items they are visibly carrying). Advice built on estimates is marked `ES
   gold is the sum of catalogue prices, not of this field.
 - **`position` is an empty string** in the recorded payload, so roles default to MID.
 - **`championName` is the display name** (`Wukong`), Data Dragon keys by id (`MonkeyKing`); both are indexed.
-- **No "in base" flag exists.** The overlay treats "the active player is dead" as the buy moment.
+- **No "in base" flag exists.** The overlay treats "the active player is dead" as the buy moment. While alive only CRITICAL advice is shown, while dead everything; there is no fight detector, dead is the only proxy.
+
+## Objective timers
+
+`events.Events[]` carries `DragonKill` (with `DragonType`, `Elder` for the Elder Dragon), `BaronKill` and `HeraldKill`
+(`EventTime` in game seconds). `GameStateMapper` keeps only those; a missing `events` key or other events are ignored.
+`ObjectiveTracker` shows a countdown only when an objective is 1 to 30 s away, from the most recent kill of each type.
+
+Checked 2026-11-24 on the League wiki (patch V26.12), numbers live in `ObjectiveSchedule`:
+
+| Objective | First spawn | After a kill | Source |
+|---|---|---|---|
+| Dragon | 5:00 | 5:00 (Elder Dragon: 6:00) | https://wiki.leagueoflegends.com/en-us/Dragon |
+| Baron Nashor | 20:00 | 6:00 | https://wiki.leagueoflegends.com/en-us/Baron_Nashor |
+| Rift Herald | 15:00 | never respawns (despawns 19:45) | https://wiki.leagueoflegends.com/en-us/Rift_Herald |
+
+The memory numbers "Herald 8:00 with a 6:00 respawn" are outdated and were not used. Not modelled: the Voidgrubs
+(`HordeKill`), and whether the pit holds a normal or Elder Dragon before the first kill (the timer says "Dragon").
