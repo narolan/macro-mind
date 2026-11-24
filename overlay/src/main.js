@@ -18,7 +18,6 @@ const ADVICE_URL = process.env.MACROMIND_URL || `http://127.0.0.1:${PORT}/advice
 const POLL_INTERVAL_MS = 1000;
 const VIEW_MODEL_CHANNEL = 'view-model'; // must match the channel preload.js listens on
 const WINDOW_WIDTH = 380;
-const WINDOW_HEIGHT = 340;
 const SCREEN_EDGE_MARGIN = 24;
 const RAISE_INTERVAL_MS = 1000;
 let raiseTimer = null;
@@ -77,7 +76,7 @@ function startBackend() {
 function createOverlay() {
   const window = new BrowserWindow({
     width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
+    height: 340, // placeholder: applyOverlaySettings sizes it to the display
     transparent: true,
     frame: false,
     resizable: false,
@@ -96,8 +95,10 @@ function createOverlay() {
 
 function applyOverlaySettings() {
   if (!overlay || overlay.isDestroyed()) return;
-  const bounds = overlayBounds(screen.getPrimaryDisplay().workArea, settings.corner,
-    { width: WINDOW_WIDTH, height: WINDOW_HEIGHT }, SCREEN_EDGE_MARGIN);
+  const workArea = screen.getPrimaryDisplay().workArea;
+  // Full-height transparent click-through window: cards never get cut off at the bottom.
+  const bounds = overlayBounds(workArea, settings.corner,
+    { width: WINDOW_WIDTH, height: workArea.height - 2 * SCREEN_EDGE_MARGIN }, SCREEN_EDGE_MARGIN);
   overlay.setBounds(bounds);
   overlay.setOpacity(settings.opacity);
   syncOverlayVisibility();
