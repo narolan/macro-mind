@@ -9,6 +9,6 @@
     {"championName": "Soraka", "isBot": false, "isDead": false, "items": [], "level": 12, "position": "UTILITY", "scores": {"kills": 0, "deaths": 2, "assists": 9, "creepScore": 20, "wardScore": 30}, "team": "CHAOS", "riotId": "E1#EUW", "summonerName": "E1"},
     {"championName": "Malphite", "isBot": false, "isDead": true, "items": [{"itemID": 3075, "displayName": "Thornmail", "price": 2700, "count": 1}], "level": 13, "position": "TOP", "scores": {"kills": 2, "deaths": 3, "assists": 4, "creepScore": 130, "wardScore": 6}, "team": "CHAOS", "riotId": "E2#EUW", "summonerName": "E2"}
   ],
-  "events": {"Events": [{"EventID": 0, "EventName": "GameStart", "EventTime": 0.05}]},
+  "events": {"Events": [{"EventID": 0, "EventName": "GameStart", "EventTime": 0.05}, {"EventID": 1, "EventName": "DragonKill", "EventTime": 400.9, "DragonType": "Fire"}, {"EventID": 2, "EventName": "HordeKill", "EventTime": 500.0}, {"EventID": 3, "EventName": "BaronKill", "EventTime": 880.2}]},
   "gameData": {"gameMode": "CLASSIC", "gameTime": 912.5, "mapName": "Map11", "mapNumber": 11, "mapTerrain": "Default"}
 }
