@@ -1,6 +1,6 @@
 {
   "name": "macromind-overlay",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "private": true,
   "description": "Transparent click-through overlay showing MacroMind item advice",
   "main": "src/main.js",
