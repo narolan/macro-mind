@@ -31,7 +31,7 @@ record EnemyThreat(List<Player> enemies) {
         return enemies.stream().max(Comparator.comparingDouble(EnemyThreat::apThreat)).orElse(null);
     }
 
-    /** The enemy with the highest combined AD and AP threat, or null when there are no enemies. */
+    /** The enemy with the highest combined AD and AP threat (the first one on a tie), or null when there are no enemies. */
     Player mostDangerous() {
         return enemies.stream().max(Comparator.comparingDouble(p -> adThreat(p) + apThreat(p))).orElse(null);
     }

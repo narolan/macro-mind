@@ -5,23 +5,20 @@ import com.macromind.domain.model.Alert;
 import com.macromind.domain.model.AlertKind;
 import com.macromind.domain.model.BuildAdvice;
 import com.macromind.domain.model.GameState;
-import com.macromind.domain.model.Item;
-import com.macromind.domain.model.ItemTag;
 import com.macromind.domain.model.Player;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Warns when the most dangerous living enemy (by {@link EnemyThreat}) hits a power spike: ultimate levels
- * 6, 11 and 16, or a changed count of completed big items. A "completed big item" is worth at least
- * {@value #BIG_ITEM_GOLD} gold and is not tagged COMPONENT (builds into something), BOOTS or STARTER.
- * Each spike has its own key, so it is announced once; at most {@value #MAX_ALERTS} alerts per poll.
+ * Warns when the most dangerous living enemy (by {@link EnemyThreat}) has just hit an ultimate level spike: level
+ * 6, 11 or 16, or the one level after ({@value #SPIKE_BAND_LEVELS} levels per band). Rules keep no memory, so
+ * "just" is judged from the level alone; the poll loop's alert freshness window stops repeats.
+ * Big-item spikes are deliberately not covered: from one snapshot a rule cannot tell a new item from an old one.
+ * At most one alert per poll.
  */
 final class SpikeRule implements AlertRule {
 
-    static final int BIG_ITEM_GOLD = 2200;
-    static final int MAX_ALERTS = 2;
+    static final int SPIKE_BAND_LEVELS = 2;
     private static final int[] SPIKE_LEVELS = {6, 11, 16};
 
     @Override
@@ -31,33 +28,12 @@ final class SpikeRule implements AlertRule {
         if (target == null) {
             return List.of();
         }
-        List<Alert> alerts = new ArrayList<>();
-        int level = highestReachedLevel(target.level());
-        if (level > 0) {
-            alerts.add(spike(target, "lvl" + level, target.championName() + " hit level " + level));
-        }
-        long bigItems = target.items().stream().filter(SpikeRule::isCompletedBigItem).count();
-        if (bigItems > 0) {
-            alerts.add(spike(target, "items:" + bigItems, target.championName() + " now has " + bigItems + " big items"));
-        }
-        return alerts.stream().limit(MAX_ALERTS).toList();
-    }
-
-    private static int highestReachedLevel(int level) {
-        int reached = 0;
         for (int spikeLevel : SPIKE_LEVELS) {
-            if (level >= spikeLevel) {
-                reached = spikeLevel;
+            if (target.level() >= spikeLevel && target.level() < spikeLevel + SPIKE_BAND_LEVELS) {
+                return List.of(new Alert(AlertKind.SPIKE, "spike:" + target.championName() + ":lvl" + spikeLevel,
+                        target.championName() + " hit level " + spikeLevel, AdvicePriority.RECOMMENDED));
             }
         }
-        return reached;
-    }
-
-    private static boolean isCompletedBigItem(Item item) {
-        return item.goldValue() >= BIG_ITEM_GOLD && !item.hasAnyTag(ItemTag.COMPONENT, ItemTag.BOOTS, ItemTag.STARTER);
-    }
-
-    private static Alert spike(Player enemy, String suffix, String message) {
-        return new Alert(AlertKind.SPIKE, "spike:" + enemy.championName() + ":" + suffix, message, AdvicePriority.RECOMMENDED);
+        return List.of();
     }
 }
