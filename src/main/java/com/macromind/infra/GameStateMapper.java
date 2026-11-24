@@ -9,9 +9,11 @@ import com.macromind.domain.model.GameState;
 import com.macromind.domain.model.Item;
 import com.macromind.domain.model.ItemStats;
 import com.macromind.domain.model.KDA;
+import com.macromind.domain.model.ObjectiveEvent;
 import com.macromind.domain.model.Player;
 import com.macromind.domain.model.PlayerStats;
 import com.macromind.domain.model.Role;
+import com.macromind.domain.service.ObjectiveSchedule;
 import com.macromind.domain.service.StatEstimator;
 
 import java.util.ArrayList;
@@ -68,8 +70,9 @@ public final class GameStateMapper {
 
         // Without the active player's team there is no way to tell allies from enemies, so none are guessed.
         String activeTeam = activeEntry.map(entry -> entry.path(TEAM).asText()).orElse("");
+        List<ObjectiveEvent> kills = objectiveKills(root.path("events").path("Events"));
         if (activeTeam.isEmpty()) {
-            return new GameState(gameTime, activePlayer, List.of(), List.of(), gameMode);
+            return new GameState(gameTime, activePlayer, List.of(), List.of(), gameMode, kills);
         }
 
         List<Player> allies = new ArrayList<>();
@@ -81,7 +84,25 @@ public final class GameStateMapper {
             boolean isEnemy = !other.path(TEAM).asText().equals(activeTeam);
             (isEnemy ? enemies : allies).add(estimatedPlayer(other, isEnemy));
         }
-        return new GameState(gameTime, activePlayer, allies, enemies, gameMode);
+        return new GameState(gameTime, activePlayer, allies, enemies, gameMode, kills);
+    }
+
+    /** Dragon, Elder, Baron and Herald kills; every other event, and a missing events key, is ignored. */
+    private static List<ObjectiveEvent> objectiveKills(JsonNode events) {
+        List<ObjectiveEvent> kills = new ArrayList<>();
+        for (JsonNode event : events) {
+            String name = switch (event.path("EventName").asText()) {
+                case "DragonKill" -> event.path("DragonType").asText().equals("Elder")
+                        ? ObjectiveSchedule.ELDER_DRAGON : ObjectiveSchedule.DRAGON;
+                case "BaronKill" -> ObjectiveSchedule.BARON;
+                case "HeraldKill" -> ObjectiveSchedule.HERALD;
+                default -> null;
+            };
+            if (name != null) {
+                kills.add(new ObjectiveEvent(name, (long) event.path("EventTime").asDouble()));
+            }
+        }
+        return kills;
     }
 
     private static Optional<JsonNode> findActiveEntry(JsonNode allPlayers, Set<String> activeIds) {

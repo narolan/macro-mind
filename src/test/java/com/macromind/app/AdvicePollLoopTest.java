@@ -229,8 +229,8 @@ class AdvicePollLoopTest {
     @Test
     void publishesObjectiveTimersAndShowsTheOverlayEvenWithoutAdvice() {
         GameState base = soraka(1000, false);
-        GameState withBaron = new GameState(1000, base.activePlayer(), List.of(), List.of(), GameMode.SUMMONERS_RIFT,
-                List.of(new ObjectiveEvent("Baron", 1020), new ObjectiveEvent("Dragon", 1100)));
+        GameState withBaron = new GameState(1180, base.activePlayer(), List.of(), List.of(), GameMode.SUMMONERS_RIFT,
+                List.of(new ObjectiveEvent("Dragon", 1000)));
         AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(withBaron), () -> List.of(itemWith("Other", 1, NO_STATS)),
                 (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)), errors::add);
 

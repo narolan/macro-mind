@@ -160,4 +160,26 @@ class GameStateMapperTest {
         assertEquals("Jinx", state.activePlayer().championName());
         assertEquals(1, state.enemies().size());
     }
+
+    @Test
+    void readsObjectiveKillsAndIgnoresUnknownEvents() {
+        assertEquals(List.of(new ObjectiveEvent("Dragon", 400), new ObjectiveEvent("Baron", 880)),
+                mapper.toGameState(fixture()).objectiveEvents());
+    }
+
+    @Test
+    void readsHeraldAndElderDragonKills() {
+        String json = fixture().replace("\"EventName\": \"BaronKill\"", "\"EventName\": \"HeraldKill\"")
+                .replace("\"DragonType\": \"Fire\"", "\"DragonType\": \"Elder\"");
+
+        assertEquals(List.of(new ObjectiveEvent("Elder Dragon", 400), new ObjectiveEvent("Rift Herald", 880)),
+                mapper.toGameState(json).objectiveEvents());
+    }
+
+    @Test
+    void toleratesAMissingEventsKey() {
+        String json = fixture().replaceAll("\"events\":.*\n", "");
+
+        assertEquals(List.of(), mapper.toGameState(json).objectiveEvents());
+    }
 }
