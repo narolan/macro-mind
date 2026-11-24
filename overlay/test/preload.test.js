@@ -23,7 +23,7 @@ function load(file) {
 test('overlay preload: exposes only onViewModel under window.macromind', () => {
   const { exposed } = load('../src/preload');
   assert.deepEqual(Object.keys(exposed), ['macromind']);
-  assert.deepEqual(Object.keys(exposed.macromind), ['onViewModel']);
+  assert.deepEqual(Object.keys(exposed.macromind), ['onViewModel', 'onSoundEnabled']);
 });
 
 test('overlay preload: onViewModel returns nothing, so the page never receives the ipcRenderer handle', () => {
@@ -38,6 +38,16 @@ test('overlay preload: forwards view models from the view-model channel without 
   assert.equal(calls.on[0].channel, 'view-model');
   calls.on[0].handler({ sender: 'secret' }, { visible: true });
   assert.deepEqual(received, [{ visible: true }]);
+});
+
+test('overlay preload: onSoundEnabled forwards only a real true, coercing anything else to false', () => {
+  const { exposed, calls } = load('../src/preload');
+  const received = [];
+  assert.equal(exposed.macromind.onSoundEnabled((enabled) => received.push(enabled)), undefined);
+  const { channel, handler } = calls.on[calls.on.length - 1];
+  assert.equal(channel, 'sound-enabled');
+  [true, false, 'true', 1, undefined].forEach((value) => handler({ sender: 'secret' }, value));
+  assert.deepEqual(received, [true, false, false, false, false]);
 });
 
 test('app preload: exposes exactly the calls the window needs under window.macromindApp', () => {

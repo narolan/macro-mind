@@ -17,6 +17,7 @@ const PORT = process.env.MACROMIND_PORT || '8765';
 const ADVICE_URL = process.env.MACROMIND_URL || `http://127.0.0.1:${PORT}/advice`;
 const POLL_INTERVAL_MS = 1000;
 const VIEW_MODEL_CHANNEL = 'view-model'; // must match the channel preload.js listens on
+const SOUND_CHANNEL = 'sound-enabled'; // likewise
 const WINDOW_WIDTH = 380;
 const SCREEN_EDGE_MARGIN = 24;
 const RAISE_INTERVAL_MS = 1000;
@@ -84,7 +85,8 @@ function createOverlay() {
     skipTaskbar: true,
     hasShadow: false,
     show: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true,
+      autoplayPolicy: 'no-user-gesture-required' }, // the cue must play with no click: the window is click-through
   });
   window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
   window.setIgnoreMouseEvents(true, { forward: true }); // click-through
@@ -101,6 +103,7 @@ function applyOverlaySettings() {
     { width: WINDOW_WIDTH, height: workArea.height - 2 * SCREEN_EDGE_MARGIN }, SCREEN_EDGE_MARGIN);
   overlay.setBounds(bounds);
   overlay.setOpacity(settings.opacity);
+  overlay.webContents.send(SOUND_CHANNEL, settings.soundEnabled);
   syncOverlayVisibility();
 }
 
@@ -132,10 +135,10 @@ function showOverlayView(view) {
 function previewOverlay() {
   if (!overlay || overlay.isDestroyed()) return;
   clearTimeout(previewTimer);
-  overlay.webContents.send(VIEW_MODEL_CHANNEL, PREVIEW_VIEW);
+  overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...PREVIEW_VIEW, silent: true }); // silent: never pings
   previewTimer = setTimeout(() => {
     previewTimer = null;
-    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, lastView);
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...lastView, silent: true });
     syncOverlayVisibility();
   }, PREVIEW_MS);
   syncOverlayVisibility();
@@ -275,6 +278,7 @@ if (!app.requestSingleInstanceLock()) {
     // Start only once the page has loaded: a view sent earlier would reach a renderer that has not subscribed yet,
     // and an unchanged view is never sent again, so it would be lost for good.
     overlay.webContents.once('did-finish-load', () => {
+      overlay.webContents.send(SOUND_CHANNEL, settings.soundEnabled); // the first applyOverlaySettings ran before the page listened
       startPolling({
         fetch: () => fetchAdvice(ADVICE_URL),
         onView: showOverlayView,

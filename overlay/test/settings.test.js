@@ -19,7 +19,7 @@ test('a corrupt file gives the defaults instead of crashing the app', () => {
 
 test('settings survive a save and a load', () => {
   const file = tempFile();
-  const chosen = { overlayEnabled: false, corner: 'bottom-left', opacity: 0.6, startWithWindows: true };
+  const chosen = { overlayEnabled: false, corner: 'bottom-left', opacity: 0.6, startWithWindows: true, soundEnabled: false };
   saveSettings(file, chosen);
   assert.deepEqual(loadSettings(file), chosen);
 });
@@ -54,6 +54,8 @@ test('opacity is clamped so the overlay can never be made invisible or out of ra
 test('booleans must really be booleans', () => {
   assert.equal(normalize({ overlayEnabled: 'false' }).overlayEnabled, DEFAULTS.overlayEnabled);
   assert.equal(normalize({ startWithWindows: 1 }).startWithWindows, DEFAULTS.startWithWindows);
+  assert.equal(normalize({ soundEnabled: 'no' }).soundEnabled, true);
+  assert.equal(normalize({ soundEnabled: false }).soundEnabled, false);
   assert.equal(normalize({ overlayEnabled: false }).overlayEnabled, false);
 });
 

@@ -86,7 +86,35 @@ function renderTimers(timers) {
   }
 }
 
+const TONE_HZ = 880;
+const TONE_SECONDS = 0.18;
+const TONE_GAIN = 0.15;
+const TONE_FLOOR = 0.001; // exponential ramps cannot reach 0
+let soundEnabled = true;
+const cueTracker = createCueTracker(); // its first view is only a baseline
+let audio = null;
+
+/** A short synthesized beep, no audio files. A failure here must never stop the drawing. */
+function ping() {
+  try {
+    audio = audio || new AudioContext();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.frequency.value = TONE_HZ;
+    gain.gain.setValueAtTime(TONE_GAIN, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(TONE_FLOOR, audio.currentTime + TONE_SECONDS);
+    osc.connect(gain).connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + TONE_SECONDS);
+  } catch { /* no audio device: stay silent */ }
+}
+
+window.macromind.onSoundEnabled((enabled) => { soundEnabled = enabled; });
+
 window.macromind.onViewModel((viewModel) => {
+  try {
+    if (cueTracker.shouldPing(viewModel, soundEnabled)) ping(); // createCueTracker comes from cues.js
+  } catch { /* a cue problem must never stop the drawing */ }
   renderAlerts(viewModel.alerts || []);
   renderTimers(viewModel.timers || []);
   const next = nextCards(viewModel.rows);
