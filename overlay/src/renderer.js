@@ -91,7 +91,7 @@ const TONE_SECONDS = 0.18;
 const TONE_GAIN = 0.15;
 const TONE_FLOOR = 0.001; // exponential ramps cannot reach 0
 let soundEnabled = true;
-let previousView = null; // the first view this window sees is only a baseline
+const cueTracker = createCueTracker(); // its first view is only a baseline
 let audio = null;
 
 /** A short synthesized beep, no audio files. A failure here must never stop the drawing. */
@@ -112,8 +112,9 @@ function ping() {
 window.macromind.onSoundEnabled((enabled) => { soundEnabled = enabled; });
 
 window.macromind.onViewModel((viewModel) => {
-  if (shouldPing(previousView, viewModel, soundEnabled)) ping(); // shouldPing comes from cues.js
-  previousView = viewModel;
+  try {
+    if (cueTracker.shouldPing(viewModel, soundEnabled)) ping(); // createCueTracker comes from cues.js
+  } catch { /* a cue problem must never stop the drawing */ }
   renderAlerts(viewModel.alerts || []);
   renderTimers(viewModel.timers || []);
   const next = nextCards(viewModel.rows);

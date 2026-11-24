@@ -40,6 +40,16 @@ test('overlay preload: forwards view models from the view-model channel without 
   assert.deepEqual(received, [{ visible: true }]);
 });
 
+test('overlay preload: onSoundEnabled forwards only a real true, coercing anything else to false', () => {
+  const { exposed, calls } = load('../src/preload');
+  const received = [];
+  assert.equal(exposed.macromind.onSoundEnabled((enabled) => received.push(enabled)), undefined);
+  const { channel, handler } = calls.on[calls.on.length - 1];
+  assert.equal(channel, 'sound-enabled');
+  [true, false, 'true', 1, undefined].forEach((value) => handler({ sender: 'secret' }, value));
+  assert.deepEqual(received, [true, false, false, false, false]);
+});
+
 test('app preload: exposes exactly the calls the window needs under window.macromindApp', () => {
   const { exposed } = load('../src/appPreload');
   assert.deepEqual(Object.keys(exposed), ['macromindApp']);

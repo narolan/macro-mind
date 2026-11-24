@@ -135,10 +135,10 @@ function showOverlayView(view) {
 function previewOverlay() {
   if (!overlay || overlay.isDestroyed()) return;
   clearTimeout(previewTimer);
-  overlay.webContents.send(VIEW_MODEL_CHANNEL, PREVIEW_VIEW);
+  overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...PREVIEW_VIEW, silent: true }); // silent: never pings
   previewTimer = setTimeout(() => {
     previewTimer = null;
-    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, lastView);
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...lastView, silent: true });
     syncOverlayVisibility();
   }, PREVIEW_MS);
   syncOverlayVisibility();
