@@ -29,6 +29,11 @@ final class DataDragonParser {
 
     private DataDragonParser() {}
 
+    /** Case, spacing and punctuation insensitive champion key ("Kai'Sa", "kaisa" and "KaiSa" all match). */
+    static String lookupKey(String championName) {
+        return championName.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
     static Map<String, ChampionBaseStats> parseChampions(String json) {
         Map<String, ChampionBaseStats> result = new HashMap<>();
         dataNode(json).properties().forEach(entry -> {
@@ -56,8 +61,10 @@ final class DataDragonParser {
 
     // The live client reports display names ("Miss Fortune"); Data Dragon keys by id ("MissFortune"). Index both.
     private static <T> void putByIdAndName(Map<String, T> result, Map.Entry<String, JsonNode> entry, T value) {
-        result.put(entry.getKey(), value);
-        result.put(entry.getValue().path("name").asText(entry.getKey()), value);
+        String name = entry.getValue().path("name").asText(entry.getKey());
+        for (String key : List.of(entry.getKey(), name, lookupKey(entry.getKey()), lookupKey(name))) {
+            result.put(key, value);
+        }
     }
 
     // Modes ship their own copy of an item under another id, often with different stats. Per mode the lowest id wins;

@@ -35,6 +35,7 @@ public final class DataDragonClient {
     private final DataDragonCache cache;
     private final String base;
     private volatile Catalogue catalogue = Catalogue.EMPTY;
+    private final java.util.Set<String> unknownLogged = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public DataDragonClient(Path cacheDir) {
         this(cacheDir, DEFAULT_BASE);
@@ -85,12 +86,24 @@ public final class DataDragonClient {
     }
 
     public Optional<ChampionBaseStats> championBaseStats(String championName) {
-        return Optional.ofNullable(catalogue.champions().get(championName));
+        return Optional.ofNullable(findChampion(catalogue.champions(), championName));
     }
 
-    /** Unknown champions default to BRUISER, the most neutral class for the rules. */
+    /** A champion Data Dragon does not know is UNKNOWN (and logged once), so no class-based advice is guessed for it. */
     public ChampionClass championClass(String championName) {
-        return catalogue.classes().getOrDefault(championName, ChampionClass.BRUISER);
+        ChampionClass found = findChampion(catalogue.classes(), championName);
+        if (found != null) {
+            return found;
+        }
+        if (!catalogue.classes().isEmpty() && unknownLogged.add(championName)) {
+            System.err.println("Champion '" + championName + "' not found in Data Dragon: no class-based advice for it");
+        }
+        return ChampionClass.UNKNOWN;
+    }
+
+    private static <T> T findChampion(Map<String, T> byName, String championName) {
+        T exact = byName.get(championName);
+        return exact != null ? exact : byName.get(DataDragonParser.lookupKey(championName));
     }
 
     public List<Item> items() {

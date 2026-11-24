@@ -61,7 +61,7 @@ public record Player(
         return switch (championClass) {
             case MAGE -> true;
             case ASSASSIN, BRUISER -> stats.abilityPower() > stats.attackDamage();
-            case MARKSMAN, TANK, SUPPORT -> false;
+            case MARKSMAN, TANK, SUPPORT, UNKNOWN -> false;
         };
     }
 
@@ -69,7 +69,7 @@ public record Player(
         return switch (championClass) {
             case MARKSMAN -> true;
             case ASSASSIN, BRUISER -> stats.attackDamage() >= stats.abilityPower();
-            case MAGE, TANK, SUPPORT -> false;
+            case MAGE, TANK, SUPPORT, UNKNOWN -> false;
         };
     }
 

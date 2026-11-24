@@ -114,7 +114,7 @@ final class ThreatRules {
         Predicate<Item> blocksBurst = resist.or(item -> item.hasAnyTag(ItemTag.SPELL_SHIELD, ItemTag.BURST_RESISTANCE));
         boolean squishy = Squishiness.of(me);
         return switch (me.championClass()) {
-            case SUPPORT -> List.of();
+            case SUPPORT, UNKNOWN -> List.of();
             case ASSASSIN -> assassinSurvive(reasoning, target, assassinApItems);
             case MARKSMAN -> squishy
                     ? factory.create(item -> ItemFit.givesPhysicalDamage(item) && blocksBurst.test(item),

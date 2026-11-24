@@ -66,6 +66,7 @@ final class CoreItemRules {
             case BRUISER -> i -> (i.stats().attackDamage() > 0 && i.stats().health() > 0) || i.stats().health() >= 300;
             case ASSASSIN -> i -> me.dealsMagicDamage() ? i.stats().abilityPower() > 0 : i.stats().attackDamage() > 0;
             case SUPPORT -> i -> i.hasTag(ItemTag.ENCHANTER);
+            case UNKNOWN -> i -> false;
         });
     }
 
@@ -77,7 +78,7 @@ final class CoreItemRules {
         return switch (me.championClass()) {
             case MARKSMAN, MAGE, ASSASSIN -> AdviceCategory.OFFENSIVE;
             case TANK -> AdviceCategory.DEFENSIVE;
-            case BRUISER, SUPPORT -> AdviceCategory.UTILITY;
+            case BRUISER, SUPPORT, UNKNOWN -> AdviceCategory.UTILITY;
         };
     }
 }

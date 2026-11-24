@@ -1,6 +1,7 @@
 package com.macromind.infra;
 
 import com.macromind.Fixtures;
+import com.macromind.domain.model.ChampionClass;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,6 +31,28 @@ class DataDragonClientTest {
 
         assertEquals(3, client.items().size());
         assertTrue(client.championBaseStats("Miss Fortune").isPresent());
+    }
+
+    @Test
+    void matchesChampionNamesIgnoringCaseSpacingAndPunctuation(@TempDir Path dir) throws IOException {
+        warmCache(dir, "16.9.1");
+        DataDragonClient client = new DataDragonClient(dir, UNREACHABLE);
+
+        client.load();
+
+        assertTrue(client.championBaseStats("MISSFORTUNE").isPresent());
+        assertTrue(client.championBaseStats("miss fortune").isPresent());
+        assertEquals(ChampionClass.TANK, client.championClass("malphite"));
+    }
+
+    @Test
+    void reportsAnUnlistedChampionAsUnknownInsteadOfGuessingABruiser(@TempDir Path dir) throws IOException {
+        warmCache(dir, "16.9.1");
+        DataDragonClient client = new DataDragonClient(dir, UNREACHABLE);
+
+        client.load();
+
+        assertEquals(ChampionClass.UNKNOWN, client.championClass("Nobody"));
     }
 
     @Test

@@ -24,6 +24,31 @@ class BuildAdvisorTest {
         assertTrue(advices.stream().anyMatch(a -> a.recommendedItem().equals(MAGIC_PEN_ITEM)));
     }
 
+    private static final Item JAKSHO = item("Jak'Sho, The Protean", itemStats(0, 0, 45, 45, 350, 0, 0, 0, 0));
+
+    private static boolean advises(ChampionClass championClass, Item candidate) {
+        Player me = player("Vayne", championClass, false, List.of(), AVERAGE_STATS);
+        Player enemy = player("Zed", ChampionClass.ASSASSIN, true, List.of(), stats(80, 200, 100, 100));
+        return new BuildAdvisor(game(me, List.of(enemy)), List.of(candidate)).generateBuildAdvices().stream()
+                .anyMatch(a -> a.recommendedItem().equals(candidate));
+    }
+
+    @Test
+    void doesNotAdviseAPureTankItemToAMarksmanOrMage() {
+        assertFalse(advises(ChampionClass.MARKSMAN, JAKSHO));
+        assertFalse(advises(ChampionClass.MAGE, JAKSHO));
+    }
+
+    @Test
+    void stillAdvisesAPureTankItemToABruiser() {
+        assertTrue(advises(ChampionClass.BRUISER, JAKSHO));
+    }
+
+    @Test
+    void givesNoClassBasedAdviceForAChampionItCouldNotLookUp() {
+        assertFalse(advises(ChampionClass.UNKNOWN, JAKSHO));
+    }
+
     @Test
     void apThreatAdviceForTankUsesApMessageAndApTarget() {
         assertApThreatAdvice(ChampionClass.TANK, tankItem());
