@@ -31,6 +31,11 @@ record EnemyThreat(List<Player> enemies) {
         return enemies.stream().max(Comparator.comparingDouble(EnemyThreat::apThreat)).orElse(null);
     }
 
+    /** The enemy with the highest combined AD and AP threat, or null when there are no enemies. */
+    Player mostDangerous() {
+        return enemies.stream().max(Comparator.comparingDouble(p -> adThreat(p) + apThreat(p))).orElse(null);
+    }
+
     double totalAdThreat() {
         return enemies.stream().mapToDouble(EnemyThreat::adThreat).sum();
     }
