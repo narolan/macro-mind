@@ -4,11 +4,11 @@ const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 // Checks GitHub Releases (see publish in electron-builder.yml), downloads a newer version in the background
 // and installs it on the next quit. `updater` is injected so tests need no Electron.
-function startAutoUpdate({ updater, log, intervalMs = CHECK_INTERVAL_MS, setIntervalFn = setInterval }) {
+function startAutoUpdate({ updater, log, intervalMs = CHECK_INTERVAL_MS, setIntervalFn = setInterval, onDownloaded = () => {} }) {
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;
   updater.on('update-available', (info) => log(`update available: ${info.version}`));
-  updater.on('update-downloaded', (info) => log(`update ${info.version} downloaded, installs on quit`));
+  updater.on('update-downloaded', (info) => { log(`update ${info.version} downloaded, installs on quit`); onDownloaded(info); });
   updater.on('error', (error) => log(`update failed: ${error && error.stack || error}`));
   const check = () => updater.checkForUpdates().catch((error) => log(`update check failed: ${error && error.stack || error}`));
   check();

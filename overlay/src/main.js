@@ -241,9 +241,13 @@ function registerIpc() {
   handle('app:preview-overlay', () => { previewOverlay(); });
 }
 
+let updateDownloaded = false;
+
 async function quit() {
   try { if (backend) await backend.stop(); } catch (error) { log(`backend stop failed: ${error && error.stack || error}`); }
-  app.exit(0);
+  // app.exit() skips electron-updater's install-on-quit hook, so a downloaded update is installed explicitly.
+  if (updateDownloaded) require('electron-updater').autoUpdater.quitAndInstall(true, false);
+  else app.exit(0);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -279,6 +283,6 @@ if (!app.requestSingleInstanceLock()) {
       });
     });
     startStatusLoop();
-    if (app.isPackaged) startAutoUpdate({ updater: require('electron-updater').autoUpdater, log }); // dev runs have no release to compare with
+    if (app.isPackaged) startAutoUpdate({ updater: require('electron-updater').autoUpdater, log, onDownloaded: () => { updateDownloaded = true; } }); // dev runs have no release to compare with
   }).catch((error) => log(`startup failed: ${error && error.stack || error}`));
 }

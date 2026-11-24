@@ -30,3 +30,11 @@ test('logsCheckFailuresInsteadOfThrowing', async () => {
   await new Promise((r) => setImmediate(r));
   assert.ok(logs.some((m) => m.includes('update check failed')));
 });
+
+test('callsOnDownloadedWhenAnUpdateIsDownloaded', () => {
+  const updater = fakeUpdater(() => Promise.resolve());
+  let downloaded = 0;
+  startAutoUpdate({ updater, log: () => {}, setIntervalFn: () => null, onDownloaded: () => { downloaded++; } });
+  updater.emit('update-downloaded', { version: '9.9.9' });
+  assert.strictEqual(downloaded, 1);
+});
