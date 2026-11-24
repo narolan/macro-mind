@@ -11,7 +11,8 @@ public final class AlertAdvisor {
 
     /** One line per rule. */
     public static final List<AlertRule> RULES = List.of(
-            new BuyNowRule());
+            new BuyNowRule(),
+            new SpikeRule());
 
     private AlertAdvisor() {}
 
