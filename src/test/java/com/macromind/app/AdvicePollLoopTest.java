@@ -34,6 +34,18 @@ class AdvicePollLoopTest {
     }
 
     @Test
+    void neverAdvisesAnItemTheCurrentModesShopDoesNotSell() {
+        Item riftOnly = new Item(1, "Mortal Reminder", 3000, GRIEVOUS.stats(), GRIEVOUS.tags(), java.util.Set.of(11));
+        GameState aram = new GameState(1000, soraka(1000, true).activePlayer(), List.of(), soraka(1000, true).enemies(), GameMode.ARAM);
+        AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(aram), () -> List.of(riftOnly, itemWith("Other", 1, NO_STATS)),
+                (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
+
+        loop.pollOnce();
+
+        assertTrue(published.get(0).advice().stream().noneMatch(a -> a.recommendedItem().name().equals("Mortal Reminder")));
+    }
+
+    @Test
     void publishesHiddenAndEmptyWhenNoGameIsRunning() {
         loop(Optional::empty).pollOnce();
 

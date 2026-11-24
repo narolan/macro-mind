@@ -2,6 +2,7 @@ package com.macromind.infra;
 
 import com.macromind.Fixtures;
 import com.macromind.domain.model.ChampionBaseStats;
+import com.macromind.domain.model.GameMode;
 import com.macromind.domain.model.Item;
 import com.macromind.domain.model.ItemTag;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,32 @@ class DataDragonParserTest {
 
         Item morello = items.stream().filter(i -> i.name().equals("Morellonomicon")).findFirst().orElseThrow();
         assertTrue(morello.tags().contains(ItemTag.GRIEVOUS_WOUNDS));
+    }
+
+    @Test
+    void remembersEveryMapAnItemIsSoldOnAndDropsArenaOnlyItems() {
+        String json = "{\"data\":{"
+                + "\"1\":{\"name\":\"Both\",\"maps\":{\"11\":true,\"12\":true},\"gold\":{\"total\":1,\"purchasable\":true}},"
+                + "\"2\":{\"name\":\"RiftOnly\",\"maps\":{\"11\":true,\"12\":false},\"gold\":{\"total\":1,\"purchasable\":true}},"
+                + "\"3\":{\"name\":\"AramOnly\",\"maps\":{\"12\":true},\"gold\":{\"total\":1,\"purchasable\":true}},"
+                + "\"4\":{\"name\":\"ArenaOnly\",\"maps\":{\"30\":true},\"gold\":{\"total\":1,\"purchasable\":true}},"
+                + "\"5\":{\"name\":\"Split\",\"maps\":{\"11\":true},\"gold\":{\"total\":1,\"purchasable\":true}},"
+                + "\"773031\":{\"name\":\"Split\",\"maps\":{\"12\":true},\"gold\":{\"total\":1,\"purchasable\":true}}}}";
+
+        List<Item> parsed = DataDragonParser.parseItems(json);
+        Map<String, Item> byName = parsed.stream()
+                .collect(java.util.stream.Collectors.toMap(Item::name, i -> i, (first, second) -> first));
+
+        assertEquals(java.util.Set.of(11, 12), byName.get("Both").maps());
+        assertTrue(byName.get("RiftOnly").isAvailableIn(GameMode.SUMMONERS_RIFT));
+        assertFalse(byName.get("RiftOnly").isAvailableIn(GameMode.ARAM));
+        assertFalse(byName.get("AramOnly").isAvailableIn(GameMode.SUMMONERS_RIFT));
+        assertFalse(byName.containsKey("ArenaOnly"));
+        // A mode's own copy keeps its own stats: Split is two items, one per shop, never one with a mixed identity.
+        Map<Integer, Item> splitById = parsed.stream().filter(i -> i.name().equals("Split"))
+                .collect(java.util.stream.Collectors.toMap(Item::id, i -> i));
+        assertEquals(java.util.Set.of(11), splitById.get(5).maps());
+        assertEquals(java.util.Set.of(12), splitById.get(773031).maps());
     }
 
     @Test

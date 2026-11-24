@@ -62,13 +62,14 @@ public final class GameStateMapper {
     private GameState map(JsonNode root) {
         JsonNode active = root.path(ACTIVE_PLAYER);
         long gameTime = (long) root.path("gameData").path("gameTime").asDouble();
+        GameMode gameMode = GameMode.fromMapNumber(root.path("gameData").path("mapNumber").asInt());
         Optional<JsonNode> activeEntry = findActiveEntry(root.path(ALL_PLAYERS), identities(active));
         Player activePlayer = activePlayer(active, activeEntry.orElse(null));
 
         // Without the active player's team there is no way to tell allies from enemies, so none are guessed.
         String activeTeam = activeEntry.map(entry -> entry.path(TEAM).asText()).orElse("");
         if (activeTeam.isEmpty()) {
-            return new GameState(gameTime, activePlayer, List.of(), List.of(), GameMode.SUMMONERS_RIFT);
+            return new GameState(gameTime, activePlayer, List.of(), List.of(), gameMode);
         }
 
         List<Player> allies = new ArrayList<>();
@@ -80,7 +81,7 @@ public final class GameStateMapper {
             boolean isEnemy = !other.path(TEAM).asText().equals(activeTeam);
             (isEnemy ? enemies : allies).add(estimatedPlayer(other, isEnemy));
         }
-        return new GameState(gameTime, activePlayer, allies, enemies, GameMode.SUMMONERS_RIFT);
+        return new GameState(gameTime, activePlayer, allies, enemies, gameMode);
     }
 
     private static Optional<JsonNode> findActiveEntry(JsonNode allPlayers, Set<String> activeIds) {

@@ -27,6 +27,16 @@ class GameStateMapperTest {
     }
 
     @Test
+    void readsTheGameModeFromTheMapNumberAndFallsBackToSummonersRift() {
+        String aram = fixture().replace("\"mapNumber\": 11", "\"mapNumber\": 12");
+        String arena = fixture().replace("\"mapNumber\": 11", "\"mapNumber\": 30");
+
+        assertEquals(GameMode.SUMMONERS_RIFT, mapper.toGameState(fixture()).gameMode());
+        assertEquals(GameMode.ARAM, mapper.toGameState(aram).gameMode());
+        assertEquals(GameMode.SUMMONERS_RIFT, mapper.toGameState(arena).gameMode());
+    }
+
+    @Test
     void mapsFixtureToGameStateWithExactActiveStatsAndEstimatedEnemies() {
         GameState state = mapper.toGameState(fixture());
 

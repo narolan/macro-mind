@@ -59,8 +59,14 @@ final class AdvicePollLoop {
         }
     }
 
+    /** Only the items this mode's shop sells; if that leaves nothing the full list is used rather than no advice. */
+    private static List<Item> soldIn(GameState state, List<Item> items) {
+        List<Item> sold = items.stream().filter(item -> item.isAvailableIn(state.gameMode())).toList();
+        return sold.isEmpty() ? items : sold;
+    }
+
     private void publish(GameState state, List<Item> items) {
-        List<BuildAdvice> advice = new BuildAdvisor(state, items).generateBuildAdvices();
+        List<BuildAdvice> advice = new BuildAdvisor(state, soldIn(state, items)).generateBuildAdvices();
         firstSeen = OverlayVisibility.track(firstSeen, advice, state.gameTimeInSeconds());
         publisher.publish(OverlayVisibility.shouldShow(state, advice, firstSeen), advice, AppStatus.IN_GAME);
     }

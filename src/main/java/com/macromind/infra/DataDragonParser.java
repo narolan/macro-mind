@@ -5,13 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.macromind.domain.model.ChampionBaseStats;
 import com.macromind.domain.model.ChampionClass;
+import com.macromind.domain.model.GameMode;
 import com.macromind.domain.model.Item;
 import com.macromind.domain.model.ItemStats;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,19 +60,44 @@ final class DataDragonParser {
         result.put(entry.getValue().path("name").asText(entry.getKey()), value);
     }
 
-    // Several modes ship a copy of the same item under another id; the lowest id is the Summoner's Rift one.
+    // Modes ship their own copy of an item under another id, often with different stats. Per mode the lowest id wins;
+    // an item keeps the map ids of the modes it won, so a copy is never advised with another mode's numbers.
     static List<Item> parseItems(String json) {
-        Map<String, Item> byName = new LinkedHashMap<>();
+        Map<String, Item> winnerPerModeAndName = new LinkedHashMap<>();
+        Map<Integer, Set<Integer>> mapsById = new HashMap<>();
+        Map<Integer, Item> itemById = new LinkedHashMap<>();
         dataNode(json).properties().stream()
                 .sorted(java.util.Comparator.comparingInt(e -> idOrMax(e.getKey())))
                 .forEach(entry -> {
                     JsonNode node = entry.getValue();
                     String name = node.path("name").asText();
-                    if (isBuyableOnSummonersRift(node, name) && isAdviseable(node)) {
-                        byName.putIfAbsent(name, toItem(entry.getKey(), node, name));
+                    if (!isBuyable(node, name) || !isAdviseable(node)) {
+                        return;
+                    }
+                    Item item = toItem(entry.getKey(), node, name);
+                    for (GameMode mode : GameMode.values()) {
+                        Set<Integer> maps = soldOn(node, mode);
+                        if (!maps.isEmpty() && winnerPerModeAndName.putIfAbsent(mode + "|" + name, item) == null) {
+                            mapsById.computeIfAbsent(item.id(), id -> new HashSet<>()).addAll(maps);
+                            itemById.putIfAbsent(item.id(), item);
+                        }
                     }
                 });
-        return List.copyOf(byName.values());
+        return itemById.values().stream().map(item -> withMaps(item, mapsById.get(item.id()))).toList();
+    }
+
+    private static Item withMaps(Item item, Set<Integer> maps) {
+        return new Item(item.id(), item.name(), item.goldValue(), item.stats(), item.tags(), maps);
+    }
+
+    private static Set<Integer> soldOn(JsonNode node, GameMode mode) {
+        Set<Integer> maps = new HashSet<>();
+        for (int mapId : mode.mapIds()) {
+            if (node.path("maps").path(String.valueOf(mapId)).asBoolean(false)) {
+                maps.add(mapId);
+            }
+        }
+        return maps;
     }
 
     private static int idOrMax(String key) {
@@ -114,10 +142,9 @@ final class DataDragonParser {
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
     }
 
-    // Real item.json holds Arena/ARAM/event copies and unbuyable entries; only these can be advised.
-    private static boolean isBuyableOnSummonersRift(JsonNode node, String name) {
+    // Real item.json holds Arena/event copies and unbuyable entries; only the buyable ones can be advised.
+    private static boolean isBuyable(JsonNode node, String name) {
         return !name.isEmpty()
-                && node.path("maps").path("11").asBoolean(false)
                 && node.path("gold").path("purchasable").asBoolean(false)
                 && node.path("inStore").asBoolean(true)
                 && !node.has("requiredChampion")
