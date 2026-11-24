@@ -63,6 +63,17 @@ class AdvicePollLoopTest {
     }
 
     @Test
+    void publishesOnlyCriticalAdviceWhileAliveAndHidesWhenNothingIsLeft() {
+        Item mageItem = itemWith("Plain", 3000, itemStats(0, 0, 0, 0, 0, 0, 0, 0, 0));
+        List<Published> aliveOut = new ArrayList<>();
+        new AdvicePollLoop(() -> Optional.of(soraka(1000, false)), () -> List.of(mageItem),
+                (v, a, al, t, st) -> aliveOut.add(new Published(v, a, al, t, st)), errors::add).pollOnce();
+
+        assertTrue(aliveOut.get(0).advice().stream().allMatch(a -> a.priority() == AdvicePriority.CRITICAL));
+        assertEquals(!aliveOut.get(0).advice().isEmpty(), aliveOut.get(0).visible());
+    }
+
+    @Test
     void showsNewCriticalAdviceOnlyForTheWindowThenHidesIt() {
         List<Optional<GameState>> polls = List.of(Optional.of(soraka(1000, false)), Optional.of(soraka(1010, false)),
                 Optional.of(soraka(1100, false)));

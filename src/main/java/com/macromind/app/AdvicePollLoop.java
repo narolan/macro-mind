@@ -79,7 +79,8 @@ final class AdvicePollLoop {
     }
 
     private void publish(GameState state, List<Item> items) {
-        List<BuildAdvice> advice = new BuildAdvisor(state, soldIn(state, items)).generateBuildAdvices();
+        List<BuildAdvice> advice = OverlayVisibility.forDisplay(state,
+                new BuildAdvisor(state, soldIn(state, items)).generateBuildAdvices());
         firstSeen = OverlayVisibility.track(firstSeen, advice, state.gameTimeInSeconds());
         List<Alert> alerts = AlertAdvisor.alerts(alertRules, state, advice);
         alertFirstSeen = OverlayVisibility.trackAlerts(alertFirstSeen, alerts, state.gameTimeInSeconds());
