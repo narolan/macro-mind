@@ -58,7 +58,31 @@ class DamageMixRuleTest {
 
     @Test
     void staysQuietBeforeTheLaningPhaseIsUnderWay() {
-        assertEquals(List.of(), run(AdviceThresholds.BOOTS_MIN_SECONDS - 1, ChampionClass.MARKSMAN, List.of(), AD_ENEMY));
+        assertEquals(List.of(), run(DamageMixRule.MIN_SECONDS - 1, ChampionClass.MARKSMAN, List.of(), AD_ENEMY));
+    }
+
+    @Test
+    void firesAtExactlyTheMinimumGameTime() {
+        assertEquals(1, run(DamageMixRule.MIN_SECONDS, ChampionClass.MARKSMAN, List.of(), AD_ENEMY).size());
+    }
+
+    /** AD threat 7 : AP threat 3 gives a ratio of exactly the threshold, which is not "heavy". */
+    private static List<Alert> runWithAdShare(int ad, int ap) {
+        return run(LATE, ChampionClass.MARKSMAN, List.of(),
+                player("A", ChampionClass.ASSASSIN, true, List.of(), stats(50, 50, ad, 0)),
+                player("B", ChampionClass.MAGE, true, List.of(), stats(50, 50, 0, ap)));
+    }
+
+    @Test
+    void staysQuietAtExactlyTheHeavyAdRatioAndFiresJustAbove() {
+        assertEquals(List.of(), runWithAdShare(700, 300));
+        assertEquals("damage-mix-ad", runWithAdShare(701, 299).get(0).key());
+    }
+
+    @Test
+    void staysQuietAtExactlyTheHeavyApRatioAndFiresJustBelow() {
+        assertEquals(List.of(), runWithAdShare(300, 700));
+        assertEquals("damage-mix-ap", runWithAdShare(299, 701).get(0).key());
     }
 
     @Test

@@ -15,6 +15,9 @@ import java.util.function.ToIntFunction;
 /** Warns when the enemy team is heavily one damage type and the player has no matching resist item yet. */
 final class DamageMixRule implements AlertRule {
 
+    /** Resist items are only worth warning about once the laning phase is over. */
+    static final long MIN_SECONDS = 300;
+
     private static final Alert NO_ARMOR = new Alert(AlertKind.DAMAGE_MIX, "damage-mix-ad",
             "Enemy damage is mostly AD and you have no armor yet", AdvicePriority.RECOMMENDED);
     private static final Alert NO_MAGIC_RESIST = new Alert(AlertKind.DAMAGE_MIX, "damage-mix-ap",
@@ -24,7 +27,7 @@ final class DamageMixRule implements AlertRule {
     public List<Alert> evaluate(GameState state, List<BuildAdvice> advice) {
         Player me = state.activePlayer();
         boolean isExcluded = me.championClass() == ChampionClass.SUPPORT || me.championClass() == ChampionClass.UNKNOWN;
-        if (isExcluded || state.gameTimeInSeconds() < AdviceThresholds.BOOTS_MIN_SECONDS) {
+        if (isExcluded || state.gameTimeInSeconds() < MIN_SECONDS) {
             return List.of();
         }
         double adRatio = EnemyThreat.of(state).adRatio();
