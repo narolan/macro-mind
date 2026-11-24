@@ -62,15 +62,40 @@ class AdvicePollLoopTest {
         assertEquals("Mortal Reminder", published.get(0).advice().get(0).recommendedItem().name());
     }
 
-    @Test
-    void publishesOnlyCriticalAdviceWhileAliveAndHidesWhenNothingIsLeft() {
-        Item mageItem = itemWith("Plain", 3000, itemStats(0, 0, 0, 0, 0, 0, 0, 0, 0));
-        List<Published> aliveOut = new ArrayList<>();
-        new AdvicePollLoop(() -> Optional.of(soraka(1000, false)), () -> List.of(mageItem),
-                (v, a, al, t, st) -> aliveOut.add(new Published(v, a, al, t, st)), errors::add).pollOnce();
+    private static final Item PEN = itemWith("Dominik", 3000, itemStats(30, 0, 0, 0, 0, 0, 0, 0, 0), ItemTag.ARMOR_PENETRATION_PERCENT);
 
-        assertTrue(aliveOut.get(0).advice().stream().allMatch(a -> a.priority() == AdvicePriority.CRITICAL));
-        assertEquals(!aliveOut.get(0).advice().isEmpty(), aliveOut.get(0).visible());
+    /** Soraka's healing makes GRIEVOUS critical; a 200 armor tank makes percent armor pen recommended. */
+    private static GameState healerAndTank(boolean dead, int gold) {
+        Player me = withGold(player("Me", ChampionClass.MARKSMAN, false, List.of(), AVERAGE_STATS), gold).withDead(dead);
+        Player soraka = player("Soraka", ChampionClass.SUPPORT, true, List.of(), stats(50, 50, 0, 100));
+        Player tank = player("Ornn", ChampionClass.TANK, true, List.of(), stats(200, 50, 60, 0));
+        return gameAt(1000, me, List.of(soraka, tank));
+    }
+
+    private Published pollOnce(GameState state, List<Item> catalogue) {
+        new AdvicePollLoop(() -> Optional.of(state), () -> catalogue,
+                (v, a, al, t, st) -> published.add(new Published(v, a, al, t, st)), errors::add).pollOnce();
+        return published.get(published.size() - 1);
+    }
+
+    @Test
+    void publishesOnlyCriticalAdviceWhileAliveAndEverythingWhileDead() {
+        List<Item> catalogue = List.of(GRIEVOUS, PEN);
+
+        Published alive = pollOnce(healerAndTank(false, 0), catalogue);
+        Published dead = pollOnce(healerAndTank(true, 0), catalogue);
+
+        assertEquals(List.of("Mortal Reminder"), alive.advice().stream().map(a -> a.recommendedItem().name()).toList());
+        assertTrue(dead.advice().stream().anyMatch(a -> a.priority() != AdvicePriority.CRITICAL));
+        assertTrue(dead.advice().stream().anyMatch(a -> a.priority() == AdvicePriority.CRITICAL));
+    }
+
+    @Test
+    void aBuyNowAlertForRecommendedAdviceStillFiresWhileAlive() {
+        Published alive = pollOnce(healerAndTank(false, 5000), List.of(PEN));
+
+        assertTrue(alive.advice().isEmpty(), "RECOMMENDED advice is not displayed while alive");
+        assertTrue(alive.alerts().stream().anyMatch(a -> a.kind() == AlertKind.BUY_NOW));
     }
 
     @Test
