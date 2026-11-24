@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AdvicePollLoopTest {
 
     /** What the loop published, in order. */
-    private record Published(boolean visible, List<BuildAdvice> advice, AppStatus status) {}
+    private record Published(boolean visible, List<BuildAdvice> advice, List<Alert> alerts, List<ObjectiveTimer> timers, AppStatus status) {}
 
     private final List<Published> published = new ArrayList<>();
     private final List<String> errors = new ArrayList<>();
@@ -29,7 +29,7 @@ class AdvicePollLoopTest {
     }
 
     private AdvicePollLoop loop(java.util.function.Supplier<Optional<GameState>> poller) {
-        return new AdvicePollLoop(poller, () -> List.of(GRIEVOUS), (visible, advice, status) -> published.add(new Published(visible, advice, status)),
+        return new AdvicePollLoop(poller, () -> List.of(GRIEVOUS), (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)),
                 errors::add);
     }
 
@@ -38,7 +38,7 @@ class AdvicePollLoopTest {
         Item riftOnly = new Item(1, "Mortal Reminder", 3000, GRIEVOUS.stats(), GRIEVOUS.tags(), java.util.Set.of(11));
         GameState aram = new GameState(1000, soraka(1000, true).activePlayer(), List.of(), soraka(1000, true).enemies(), GameMode.ARAM);
         AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(aram), () -> List.of(riftOnly, itemWith("Other", 1, NO_STATS)),
-                (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
+                (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)), errors::add);
 
         loop.pollOnce();
 
@@ -135,7 +135,7 @@ class AdvicePollLoopTest {
         List<List<Item>> catalogues = List.of(List.of(), List.of(GRIEVOUS));
         AtomicInteger next = new AtomicInteger();
         AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(soraka(1000, true)),
-                () -> catalogues.get(next.getAndIncrement()), (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
+                () -> catalogues.get(next.getAndIncrement()), (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)), errors::add);
 
         loop.pollOnce();
         loop.pollOnce();
@@ -160,7 +160,7 @@ class AdvicePollLoopTest {
     void reportsNoDataWhenTheItemCatalogueIsEmptyAndDoesNotEvenPollTheGame() {
         AtomicInteger polls = new AtomicInteger();
         AdvicePollLoop loop = new AdvicePollLoop(() -> { polls.incrementAndGet(); return Optional.of(soraka(1000, true)); },
-                List::of, (visible, advice, status) -> published.add(new Published(visible, advice, status)), errors::add);
+                List::of, (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)), errors::add);
 
         loop.pollOnce();
 
@@ -183,5 +183,60 @@ class AdvicePollLoopTest {
         loop.pollOnce();
 
         assertEquals(List.of(AppStatus.ERROR, AppStatus.IN_GAME), published.stream().map(Published::status).toList());
+    }
+
+    private static final Alert ALERT = new Alert(AlertKind.SPIKE, "k1", "Enemy spike", AdvicePriority.RECOMMENDED);
+
+    private AdvicePollLoop alertLoop(List<Optional<GameState>> polls) {
+        AtomicInteger next = new AtomicInteger();
+        return new AdvicePollLoop(() -> polls.get(next.getAndIncrement()), () -> List.of(itemWith("Other", 1, NO_STATS)),
+                (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)),
+                errors::add, List.of((state, advice) -> List.of(ALERT)));
+    }
+
+    @Test
+    void publishesAnAlertOnlyWhileItIsFreshAndShowsTheOverlayForIt() {
+        AdvicePollLoop loop = alertLoop(List.of(Optional.of(soraka(1000, false)), Optional.of(soraka(1010, false)), Optional.of(soraka(1100, false))));
+
+        loop.pollOnce();
+        loop.pollOnce();
+        loop.pollOnce();
+
+        assertEquals(List.of(1, 1, 0), published.stream().map(p -> p.alerts().size()).toList());
+        assertEquals(List.of(true, true, false), published.stream().map(Published::visible).toList());
+    }
+
+    @Test
+    void publishesStaleAlertsAgainWhileThePlayerIsDead() {
+        AdvicePollLoop loop = alertLoop(List.of(Optional.of(soraka(1000, false)), Optional.of(soraka(1100, true))));
+
+        loop.pollOnce();
+        loop.pollOnce();
+
+        assertEquals(1, published.get(1).alerts().size());
+    }
+
+    @Test
+    void aNewGameMakesTheSameAlertFreshAgain() {
+        AdvicePollLoop loop = alertLoop(List.of(Optional.of(soraka(1500, false)), Optional.of(soraka(5, false))));
+
+        loop.pollOnce();
+        loop.pollOnce();
+
+        assertEquals(1, published.get(1).alerts().size());
+    }
+
+    @Test
+    void publishesObjectiveTimersAndShowsTheOverlayEvenWithoutAdvice() {
+        GameState base = soraka(1000, false);
+        GameState withBaron = new GameState(1000, base.activePlayer(), List.of(), List.of(), GameMode.SUMMONERS_RIFT,
+                List.of(new ObjectiveEvent("Baron", 1020), new ObjectiveEvent("Dragon", 1100)));
+        AdvicePollLoop loop = new AdvicePollLoop(() -> Optional.of(withBaron), () -> List.of(itemWith("Other", 1, NO_STATS)),
+                (visible, advice, alerts, timers, status) -> published.add(new Published(visible, advice, alerts, timers, status)), errors::add);
+
+        loop.pollOnce();
+
+        assertTrue(published.get(0).visible());
+        assertEquals(List.of(new ObjectiveTimer("Baron", 20)), published.get(0).timers());
     }
 }

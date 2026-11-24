@@ -1,9 +1,13 @@
 package com.macromind.app;
 
 import com.macromind.api.AppStatus;
+import com.macromind.domain.model.Alert;
 import com.macromind.domain.model.BuildAdvice;
 import com.macromind.domain.model.GameState;
 import com.macromind.domain.model.Item;
+import com.macromind.domain.model.ObjectiveTimer;
+import com.macromind.domain.service.AlertAdvisor;
+import com.macromind.domain.service.AlertRule;
 import com.macromind.domain.service.BuildAdvisor;
 import com.macromind.domain.service.OverlayVisibility;
 
@@ -19,19 +23,28 @@ final class AdvicePollLoop {
     /** Where results go: whether to show the overlay, the advice, and what state the app is in. */
     @FunctionalInterface
     interface Publisher {
-        void publish(boolean visible, List<BuildAdvice> advice, AppStatus status);
+        void publish(boolean visible, List<BuildAdvice> advice, List<Alert> alerts, List<ObjectiveTimer> timers, AppStatus status);
     }
 
     private final Supplier<Optional<GameState>> poller;
     private final Supplier<List<Item>> catalogue;
     private final Publisher publisher;
     private final Consumer<String> onError;
+    private final List<AlertRule> alertRules;
 
     // When each CRITICAL item first appeared; touched only by the single polling thread.
     private Map<Integer, Long> firstSeen = Map.of();
+    private Map<String, Long> alertFirstSeen = Map.of();
+    private final ObjectiveTracker objectives = new ObjectiveTracker();
 
     AdvicePollLoop(Supplier<Optional<GameState>> poller, Supplier<List<Item>> catalogue,
                    Publisher publisher, Consumer<String> onError) {
+        this(poller, catalogue, publisher, onError, AlertAdvisor.RULES);
+    }
+
+    AdvicePollLoop(Supplier<Optional<GameState>> poller, Supplier<List<Item>> catalogue,
+                   Publisher publisher, Consumer<String> onError, List<AlertRule> alertRules) {
+        this.alertRules = alertRules;
         this.poller = poller;
         this.catalogue = catalogue;
         this.publisher = publisher;
@@ -43,19 +56,19 @@ final class AdvicePollLoop {
         try {
             List<Item> items = catalogue.get();
             if (items.isEmpty()) {
-                publisher.publish(false, List.of(), AppStatus.NO_DATA); // nothing can be advised without Riot's item data
+                publisher.publish(false, List.of(), List.of(), List.of(), AppStatus.NO_DATA); // nothing can be advised without Riot's item data
                 return;
             }
             Optional<GameState> state = poller.get();
             if (state.isEmpty()) {
                 // firstSeen is kept: one failed poll must not make old CRITICAL advice look new again
-                publisher.publish(false, List.of(), AppStatus.NO_GAME);
+                publisher.publish(false, List.of(), List.of(), List.of(), AppStatus.NO_GAME);
                 return;
             }
             publish(state.get(), items);
         } catch (Throwable e) {
             onError.accept("Poll failed: " + e);
-            publisher.publish(false, List.of(), AppStatus.ERROR);
+            publisher.publish(false, List.of(), List.of(), List.of(), AppStatus.ERROR);
         }
     }
 
@@ -68,6 +81,10 @@ final class AdvicePollLoop {
     private void publish(GameState state, List<Item> items) {
         List<BuildAdvice> advice = new BuildAdvisor(state, soldIn(state, items)).generateBuildAdvices();
         firstSeen = OverlayVisibility.track(firstSeen, advice, state.gameTimeInSeconds());
-        publisher.publish(OverlayVisibility.shouldShow(state, advice, firstSeen), advice, AppStatus.IN_GAME);
+        List<Alert> alerts = AlertAdvisor.alerts(alertRules, state, advice);
+        alertFirstSeen = OverlayVisibility.trackAlerts(alertFirstSeen, alerts, state.gameTimeInSeconds());
+        List<Alert> fresh = OverlayVisibility.freshAlerts(state, alerts, alertFirstSeen);
+        List<ObjectiveTimer> timers = objectives.timers(state);
+        publisher.publish(OverlayVisibility.shouldShow(state, advice, firstSeen, fresh, timers), advice, fresh, timers, AppStatus.IN_GAME);
     }
 }

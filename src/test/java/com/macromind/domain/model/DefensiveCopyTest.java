@@ -60,4 +60,15 @@ class DefensiveCopyTest {
         assertEquals(Set.of(ItemTag.BOOTS), item.tags());
         assertThrows(UnsupportedOperationException.class, () -> item.tags().add(ItemTag.CLEANSE));
     }
+
+    @Test
+    void gameStateKeepsItsOwnCopyOfObjectiveEvents() {
+        Player p = playerWith(List.of());
+        List<ObjectiveEvent> events = new ArrayList<>(List.of(new ObjectiveEvent("Baron", 1200)));
+        GameState state = new GameState(10, p, List.of(), List.of(), GameMode.SUMMONERS_RIFT, events);
+
+        events.clear();
+
+        assertEquals(1, state.objectiveEvents().size());
+    }
 }

@@ -51,7 +51,7 @@ class AdviceContractTest {
 
         JsonNode json = fetch();
 
-        assertEquals(Set.of("visible", "advice", "iconVersion", "status"), fieldNames(json));
+        assertEquals(Set.of("visible", "advice", "iconVersion", "status", "alerts", "timers"), fieldNames(json));
         assertTrue(json.get("visible").isBoolean());
         assertTrue(json.get("advice").isArray());
         assertTrue(json.get("iconVersion").isTextual());
@@ -104,7 +104,7 @@ class AdviceContractTest {
                 HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + server.port() + "/advice")).build(),
                 HttpResponse.BodyHandlers.ofString());
 
-        assertTrue(response.body().startsWith("{\"visible\":false,\"advice\":[],\"iconVersion\":\"16.22.1\",\"status\":\"NO_GAME\"}"), response.body());
+        assertTrue(response.body().startsWith("{\"visible\":false,\"advice\":[],\"iconVersion\":\"16.22.1\",\"status\":\"NO_GAME\",\"alerts\":[],\"timers\":[]}"), response.body());
     }
 
     @Test
@@ -141,5 +141,22 @@ class AdviceContractTest {
         server.publish(true, List.of());
 
         assertEquals("IN_GAME", fetch().get("status").asText());
+    }
+
+    @Test
+    void alertsAndTimersHaveExactlyTheFieldsTheOverlayReads() throws Exception {
+        server = new AdviceServer(0);
+        server.publish(true, List.of(), List.of(new Alert(AlertKind.BUY_NOW, "k", "Buy now", AdvicePriority.CRITICAL)),
+                List.of(new ObjectiveTimer("Baron", 25)), AppStatus.IN_GAME);
+
+        JsonNode json = fetch();
+
+        JsonNode alert = json.get("alerts").get(0);
+        assertEquals(Set.of("kind", "message", "priority"), fieldNames(alert));
+        assertEquals("BUY_NOW", alert.get("kind").asText());
+        assertEquals("CRITICAL", alert.get("priority").asText());
+        JsonNode timer = json.get("timers").get(0);
+        assertEquals(Set.of("name", "secondsLeft"), fieldNames(timer));
+        assertEquals(25, timer.get("secondsLeft").asInt());
     }
 }

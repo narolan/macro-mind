@@ -61,4 +61,24 @@ class OverlayVisibilityTest {
 
         assertEquals(5L, OverlayVisibility.track(oldGame, advice, 5).get(ITEM.id()));
     }
+
+    @Test
+    void showsForFreshAlertsOrTimersEvenWithoutAdvice() {
+        Alert alert = new Alert(AlertKind.SPIKE, "k", "m", AdvicePriority.RECOMMENDED);
+
+        assertTrue(OverlayVisibility.shouldShow(state(false, 100), List.of(), Map.of(), List.of(alert), List.of()));
+        assertTrue(OverlayVisibility.shouldShow(state(false, 100), List.of(), Map.of(), List.of(), List.of(new ObjectiveTimer("Baron", 10))));
+        assertFalse(OverlayVisibility.shouldShow(state(false, 100), List.of(), Map.of(), List.of(), List.of()));
+    }
+
+    @Test
+    void alertsStayFreshForTheWindowOnlyUnlessThePlayerIsDead() {
+        Alert alert = new Alert(AlertKind.SPIKE, "k", "m", AdvicePriority.RECOMMENDED);
+        Map<String, Long> seen = OverlayVisibility.trackAlerts(Map.of(), List.of(alert), 100);
+
+        assertEquals(List.of(alert), OverlayVisibility.freshAlerts(state(false, 110), List.of(alert), seen));
+        assertEquals(List.of(), OverlayVisibility.freshAlerts(state(false, 130), List.of(alert), seen));
+        assertEquals(List.of(alert), OverlayVisibility.freshAlerts(state(true, 130), List.of(alert), seen));
+        assertEquals(5L, OverlayVisibility.trackAlerts(seen, List.of(alert), 5).get("k"));
+    }
 }

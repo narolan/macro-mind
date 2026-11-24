@@ -1,6 +1,8 @@
 'use strict';
 
 const list = document.getElementById('advice');
+const alertList = document.getElementById('alerts');
+const timerList = document.getElementById('timers');
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -51,7 +53,42 @@ function placeInOrder(next) {
   }
 }
 
+let shownAlerts = '';
+
+/** Alerts are replaced only when they change, so an unchanged alert never re-animates. */
+function renderAlerts(alerts) {
+  const key = alerts.map((alert) => alert.key).join('\n');
+  if (key === shownAlerts) return;
+  shownAlerts = key;
+  alertList.replaceChildren(...alerts.map((alert) => element('li', `alert ${alert.level}`, alert.message)));
+}
+
+const timerNodes = new Map(); // name -> { li, left }
+
+/** Timers are updated in place: the same node keeps its place while its seconds tick down. */
+function renderTimers(timers) {
+  const names = new Set(timers.map((timer) => timer.name));
+  for (const [name, node] of timerNodes) {
+    if (!names.has(name)) {
+      node.li.remove();
+      timerNodes.delete(name);
+    }
+  }
+  for (const timer of timers) {
+    if (!timerNodes.has(timer.name)) {
+      const left = element('span', 'left');
+      const li = element('li', 'timer');
+      li.append(element('span', '', timer.name), left);
+      timerNodes.set(timer.name, { li, left });
+      timerList.append(li);
+    }
+    timerNodes.get(timer.name).left.textContent = `${timer.secondsLeft}s`;
+  }
+}
+
 window.macromind.onViewModel((viewModel) => {
+  renderAlerts(viewModel.alerts || []);
+  renderTimers(viewModel.timers || []);
   const next = nextCards(viewModel.rows);
   removeDeparted(next);
   placeInOrder(next);

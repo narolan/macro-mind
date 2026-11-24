@@ -21,10 +21,12 @@ const LEVELS = Object.freeze({ CRITICAL: 'critical', RECOMMENDED: 'recommended' 
  * @typedef {object} ViewModel
  * @property {boolean} visible
  * @property {Row[]} rows
+ * @property {{message: string, level: string, key: string}[]} alerts  Heads-ups drawn above the cards.
+ * @property {{name: string, secondsLeft: number}[]} timers  Objective countdowns.
  */
 
 /** @type {ViewModel} */
-const HIDDEN_VIEW = Object.freeze({ visible: false, rows: [] });
+const HIDDEN_VIEW = Object.freeze({ visible: false, rows: [], alerts: [], timers: [] });
 
 /** Only a plain patch number and a positive integer id may reach the url; anything else means no icon. */
 function iconUrl(version, itemId) {
@@ -74,6 +76,22 @@ function groupRows(rows) {
   return [...groups.values()];
 }
 
+/** The alerts of a payload that have a message; level is the same colour scale as the cards. */
+function toAlerts(payload) {
+  if (!Array.isArray(payload.alerts)) return [];
+  return payload.alerts
+    .filter((alert) => Boolean(alert) && typeof alert.message === 'string' && alert.message.length > 0)
+    .map((alert) => ({ message: alert.message, level: LEVELS[alert.priority] || DEFAULT_LEVEL, key: `${alert.priority}|${alert.message}` }));
+}
+
+/** The timers of a payload that have a name and a whole number of seconds. */
+function toTimers(payload) {
+  if (!Array.isArray(payload.timers)) return [];
+  return payload.timers
+    .filter((timer) => Boolean(timer) && typeof timer.name === 'string' && timer.name.length > 0 && Number.isFinite(timer.secondsLeft))
+    .map((timer) => ({ name: timer.name, secondsLeft: Math.round(timer.secondsLeft) }));
+}
+
 /**
  * Turns the backend's /advice payload into what the window draws. Never throws: bad input hides the overlay.
  * @param {unknown} payload
@@ -83,8 +101,10 @@ function toViewModel(payload) {
   if (!payload || payload.visible !== true) {
     return HIDDEN_VIEW;
   }
-  const shown = toRows(payload, MAX_ROWS);
-  return shown.length === 0 ? HIDDEN_VIEW : { visible: true, rows: shown };
+  const rows = toRows(payload, MAX_ROWS);
+  const alerts = toAlerts(payload);
+  const timers = toTimers(payload);
+  return rows.length + alerts.length + timers.length === 0 ? HIDDEN_VIEW : { visible: true, rows, alerts, timers };
 }
 
 /**
@@ -108,7 +128,10 @@ function toRows(payload, maxRows) {
  * @returns {string}
  */
 function viewKey(viewModel) {
-  return viewModel.visible ? viewModel.rows.map((row) => row.key).join('\n') : '';
+  if (!viewModel.visible) return '';
+  const parts = [...viewModel.rows.map((row) => row.key), ...viewModel.alerts.map((alert) => alert.key),
+    ...viewModel.timers.map((timer) => `${timer.name}:${timer.secondsLeft}`)];
+  return parts.join('\n');
 }
 
 module.exports = { toViewModel, toRows, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };

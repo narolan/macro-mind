@@ -2,7 +2,9 @@ package com.macromind.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.macromind.domain.model.Alert;
 import com.macromind.domain.model.BuildAdvice;
+import com.macromind.domain.model.ObjectiveTimer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -39,7 +41,7 @@ public final class AdviceServer {
 
     public AdviceServer(int port, String iconVersion) throws IOException {
         this.iconVersion = iconVersion;
-        this.latest = new AtomicReference<>(render(false, List.of(), AppStatus.NO_GAME));
+        this.latest = new AtomicReference<>(render(false, List.of(), List.of(), List.of(), AppStatus.NO_GAME));
         this.server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         this.allowedHosts = Set.of("127.0.0.1:" + port(), "localhost:" + port());
         server.createContext("/advice", this::handleAdvice);
@@ -56,7 +58,11 @@ public final class AdviceServer {
     }
 
     public void publish(boolean visible, List<BuildAdvice> advice, AppStatus status) {
-        latest.set(render(visible, advice, status));
+        publish(visible, advice, List.of(), List.of(), status);
+    }
+
+    public void publish(boolean visible, List<BuildAdvice> advice, List<Alert> alerts, List<ObjectiveTimer> timers, AppStatus status) {
+        latest.set(render(visible, advice, alerts, timers, status));
     }
 
     public void stop() {
@@ -81,9 +87,9 @@ public final class AdviceServer {
         }
     }
 
-    private byte[] render(boolean visible, List<BuildAdvice> advice, AppStatus status) {
+    private byte[] render(boolean visible, List<BuildAdvice> advice, List<Alert> alerts, List<ObjectiveTimer> timers, AppStatus status) {
         try {
-            return JSON.writeValueAsString(AdvicePayload.of(visible, advice, iconVersion, status)).getBytes(StandardCharsets.UTF_8);
+            return JSON.writeValueAsString(AdvicePayload.of(visible, advice, alerts, timers, iconVersion, status)).getBytes(StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not serialize the advice payload", e);
         }

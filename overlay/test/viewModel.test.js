@@ -141,3 +141,38 @@ test('viewKey changes when a row, its reason, its priority or its alternatives c
 test('viewKey of a hidden view is the same however it became hidden', () => {
   assert.equal(viewKey(toViewModel(null)), viewKey(toViewModel({ visible: false, advice: [] })));
 });
+
+test('a visible payload with only alerts or only timers is still visible', () => {
+  const onlyAlerts = toViewModel({ visible: true, advice: [], alerts: [{ kind: 'SPIKE', message: 'Enemy spike', priority: 'CRITICAL' }] });
+  assert.equal(onlyAlerts.visible, true);
+  assert.deepEqual(onlyAlerts.alerts.map((a) => [a.message, a.level]), [['Enemy spike', 'critical']]);
+  const onlyTimers = toViewModel({ visible: true, timers: [{ name: 'Baron', secondsLeft: 25 }] });
+  assert.equal(onlyTimers.visible, true);
+  assert.deepEqual(onlyTimers.timers, [{ name: 'Baron', secondsLeft: 25 }]);
+});
+
+test('payloads without alerts or timers give empty lists, and a hidden payload shows none', () => {
+  const vm = toViewModel({ visible: true, advice: [advice('A', 'CRITICAL')] });
+  assert.deepEqual([vm.alerts, vm.timers], [[], []]);
+  assert.equal(toViewModel({ visible: false, alerts: [{ message: 'x' }] }).visible, false);
+  assert.deepEqual([HIDDEN_VIEW.alerts, HIDDEN_VIEW.timers], [[], []]);
+});
+
+test('malformed alerts and timers are dropped instead of throwing', () => {
+  const vm = toViewModel({
+    visible: true,
+    alerts: [null, 'x', { message: '' }, { message: 'ok', priority: 'NOPE' }],
+    timers: [null, { name: 'Baron' }, { name: 'Baron', secondsLeft: 'soon' }, { name: 'Dragon', secondsLeft: 12 }],
+  });
+  assert.deepEqual(vm.alerts.map((a) => [a.message, a.level]), [['ok', 'situational']]);
+  assert.deepEqual(vm.timers, [{ name: 'Dragon', secondsLeft: 12 }]);
+  for (const bad of [{ visible: true, alerts: 'no', timers: 7 }]) assert.equal(toViewModel(bad).visible, false);
+});
+
+test('viewKey changes when an alert or a timer changes', () => {
+  const base = { visible: true, alerts: [{ message: 'a', priority: 'CRITICAL' }], timers: [{ name: 'Baron', secondsLeft: 25 }] };
+  const key = viewKey(toViewModel(base));
+  assert.notEqual(key, viewKey(toViewModel({ ...base, timers: [{ name: 'Baron', secondsLeft: 24 }] })));
+  assert.notEqual(key, viewKey(toViewModel({ ...base, alerts: [{ message: 'b', priority: 'CRITICAL' }] })));
+  assert.equal(key, viewKey(toViewModel(base)));
+});

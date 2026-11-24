@@ -1,6 +1,24 @@
 html, body { margin: 0; background: transparent; overflow: hidden; font: 13px/1.35 "Segoe UI", system-ui, sans-serif; }
 #advice { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 7px; }
-#advice:empty { display: none; }
+#advice:empty, #alerts:empty, #timers:empty { display: none; }
+#alerts, #timers { list-style: none; margin: 0; padding: 8px 8px 0; display: flex; flex-direction: column; gap: 5px; }
+
+.alert, .timer {
+  --accent: #6b7280;
+  padding: 5px 10px 5px 12px;
+  border-radius: 8px;
+  color: #f6f3ea;
+  background: linear-gradient(100deg, rgba(12, 14, 20, 0.40), rgba(12, 14, 20, 0.26));
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 3px 0 0 var(--accent);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.alert { font-weight: 700; animation: arrive 260ms ease-out; }
+.alert.critical { --accent: #ff5a5f; }
+.alert.recommended { --accent: #ffb347; }
+.alert.situational { --accent: #62b0ff; }
+.timer { font-size: 12px; display: flex; justify-content: space-between; gap: 12px; opacity: 0.9; }
+.timer .left { font-variant-numeric: tabular-nums; }
 
 .row {
   --accent: #6b7280;
@@ -26,4 +44,4 @@ html, body { margin: 0; background: transparent; overflow: hidden; font: 13px/1.
 .target { margin-top: 2px; font-size: 12px; opacity: 0.75; }
 
 @keyframes arrive { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .row { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .row, .alert { animation: none; } }

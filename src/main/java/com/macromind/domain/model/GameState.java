@@ -8,12 +8,19 @@ public record GameState(
         Player activePlayer,
         List<Player> allies,
         List<Player> enemies,
-        GameMode gameMode
+        GameMode gameMode,
+        List<ObjectiveEvent> objectiveEvents
 ) {
 
     public GameState {
         allies = List.copyOf(allies);
         enemies = List.copyOf(enemies);
+        objectiveEvents = List.copyOf(objectiveEvents);
+    }
+
+    /** A state without objective events. */
+    public GameState(long gameTimeInSeconds, Player activePlayer, List<Player> allies, List<Player> enemies, GameMode gameMode) {
+        this(gameTimeInSeconds, activePlayer, allies, enemies, gameMode, List.of());
     }
 
     public int highestEnemyArmor() {
