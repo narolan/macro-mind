@@ -43,6 +43,17 @@ public final class OverlayVisibility {
                 .anyMatch(first -> first != null && state.gameTimeInSeconds() - first <= CRITICAL_WINDOW_SECONDS);
     }
 
+    /**
+     * What to publish: while alive only CRITICAL advice (the player is probably fighting, and there is no fight flag
+     * to tell otherwise); while dead everything. RECOMMENDED is left out: it is by definition not urgent.
+     */
+    public static List<BuildAdvice> forDisplay(GameState state, List<BuildAdvice> advice) {
+        if (state.activePlayer().isDead()) {
+            return advice;
+        }
+        return advice.stream().filter(a -> a.priority() == AdvicePriority.CRITICAL).toList();
+    }
+
     /** Returns a new map recording when each CRITICAL item was first seen; earlier timestamps are kept. */
     public static Map<Integer, Long> track(Map<Integer, Long> firstSeen, List<BuildAdvice> advice, long gameTime) {
         // A game clock earlier than a stored timestamp means a new game started: forget the old one.

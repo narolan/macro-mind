@@ -34,7 +34,7 @@ of the items they are visibly carrying). Advice built on estimates is marked `ES
   gold is the sum of catalogue prices, not of this field.
 - **`position` is an empty string** in the recorded payload, so roles default to MID.
 - **`championName` is the display name** (`Wukong`), Data Dragon keys by id (`MonkeyKing`); both are indexed.
-- **No "in base" flag exists.** The overlay treats "the active player is dead" as the buy moment.
+- **No "in base" flag exists.** The overlay treats "the active player is dead" as the buy moment. While alive only CRITICAL advice is shown, while dead everything; there is no fight detector, dead is the only proxy.
 
 ## Objective timers
 
