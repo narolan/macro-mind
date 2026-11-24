@@ -7,7 +7,7 @@ const CORNERS = Object.freeze(['top-right', 'top-left', 'bottom-right', 'bottom-
 const MIN_OPACITY = 0.2; // below this the overlay is effectively invisible and the user cannot tell why
 const MAX_OPACITY = 1;
 
-const DEFAULTS = Object.freeze({ overlayEnabled: true, corner: 'top-right', opacity: 1, startWithWindows: false });
+const DEFAULTS = Object.freeze({ overlayEnabled: true, corner: 'top-right', opacity: 1, startWithWindows: false, soundEnabled: true });
 
 const isBoolean = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
 
@@ -20,6 +20,7 @@ function normalize(raw) {
     corner: CORNERS.includes(input.corner) ? input.corner : DEFAULTS.corner,
     opacity,
     startWithWindows: isBoolean(input.startWithWindows, DEFAULTS.startWithWindows),
+    soundEnabled: isBoolean(input.soundEnabled, DEFAULTS.soundEnabled),
   };
 }
 

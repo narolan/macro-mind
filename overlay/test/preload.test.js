@@ -23,7 +23,7 @@ function load(file) {
 test('overlay preload: exposes only onViewModel under window.macromind', () => {
   const { exposed } = load('../src/preload');
   assert.deepEqual(Object.keys(exposed), ['macromind']);
-  assert.deepEqual(Object.keys(exposed.macromind), ['onViewModel']);
+  assert.deepEqual(Object.keys(exposed.macromind), ['onViewModel', 'onSoundEnabled']);
 });
 
 test('overlay preload: onViewModel returns nothing, so the page never receives the ipcRenderer handle', () => {

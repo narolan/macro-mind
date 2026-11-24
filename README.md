@@ -29,7 +29,7 @@ cd overlay && npm install && npm start     # overlay, in a second terminal
 The first backend start downloads Riot's static item data into `~/.macromind/cache`; later starts work offline.
 With no game running, `/advice` answers `{"visible":false,"advice":[],...,"alerts":[],"timers":[]}` and the overlay stays hidden.
 
-Besides `advice`, the payload carries `alerts` (`[{kind, message, priority}]`, shown only while fresh, about 20 s, or while you are dead) and `timers` (`[{name, secondsLeft}]`, only for objectives 1 to 30 s away). New alert rules go in `AlertAdvisor.RULES`; the overlay reads both in `overlay/src/viewModel.js`.
+Besides `advice`, the payload carries `alerts` (`[{kind, message, priority}]`, shown only while fresh, about 20 s, or while you are dead) and `timers` (`[{name, secondsLeft}]`, only for objectives 1 to 30 s away). The overlay beeps (a synthesized tone, switch it off under Settings > Sound cues) when a critical row or any alert appears that was not in the previous view; unchanged views and the first view after start never beep. New alert rules go in `AlertAdvisor.RULES`; the overlay reads both in `overlay/src/viewModel.js`.
 
 ## Configuration
 
