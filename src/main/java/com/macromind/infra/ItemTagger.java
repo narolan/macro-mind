@@ -24,10 +24,9 @@ final class ItemTagger {
     private static final Pattern CLEANSE = Pattern.compile("cleanse", Pattern.CASE_INSENSITIVE);
     private static final Pattern PERCENT_MAGIC_PEN = Pattern.compile("\\d+%\\s*Magic Penetration");
     private static final Pattern PERCENT_ARMOR_PEN = Pattern.compile("\\d+%\\s*(bonus\\s*)?Armor Penetration");
+    // Health that is dealt as damage (a "max Health ... damage" phrase), never the wearer's own health, heals or shields.
     private static final Pattern PERCENT_HEALTH_HIT = Pattern.compile(
-            "(max(imum)?|current|missing) Health[^.]{0,40}(damage|bonus)"
-                    + "|(damage|bonus|burn)[^.]{0,60}\\d+%[^.]{0,25}(max(imum)?|current|missing) Health"
-                    + "|\\d+%[^.]{0,25}(max(imum)?|current|missing) Health", Pattern.CASE_INSENSITIVE);
+            "(?<!your )(max(imum)?|current|missing) Health[^.]{0,25}damage", Pattern.CASE_INSENSITIVE);
 
     private static final int STARTER_MAX_GOLD = 500;
     private static final String QUICKSILVER_SASH = "Quicksilver Sash";

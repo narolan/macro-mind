@@ -152,6 +152,24 @@ class DataDragonParserTest {
     }
 
     @Test
+    void doesNotTagHealsAndSelfScalingItemsAsPercentHealthDamage() throws java.io.IOException {
+        java.nio.file.Path cache = java.nio.file.Path.of(System.getProperty("user.home"), ".macromind", "cache");
+        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isDirectory(cache));
+        // real patch data: heals ("restores 30% of maximum Health") and the wearer's own health are not damage
+        String json = java.nio.file.Files.readString(java.nio.file.Files.list(cache)
+                .filter(f -> f.getFileName().toString().endsWith("-item.json")).findFirst().orElseThrow());
+        Map<String, Item> items = DataDragonParser.parseItems(json).stream()
+                .collect(java.util.stream.Collectors.toMap(Item::name, i -> i, (a, b) -> a));
+
+        for (String name : List.of("Guardian Angel", "Mikael's Crucible", "Atma's Impaler", "Protoplasm Harness", "Stormsurge")) {
+            assertFalse(items.get(name).hasTag(ItemTag.PERCENT_HEALTH_DAMAGE), name);
+        }
+        for (String name : List.of("Blade of The Ruined King", "Liandry's Torment", "Deathfire Grasp", "Voltaic Cyclosword")) {
+            assertTrue(items.get(name).hasTag(ItemTag.PERCENT_HEALTH_DAMAGE), name);
+        }
+    }
+
+    @Test
     void parsesAbilityHasteIntoCooldownReduction() {
         assertEquals(10, realItems().get("Ionian Boots of Lucidity").stats().cooldownReduction(), 0.001);
     }
