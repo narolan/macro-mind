@@ -179,6 +179,7 @@ function trayImage(tone) {
 
 function buildTrayMenu() {
   return Menu.buildFromTemplate([
+    ...(updateVersion ? [{ label: `Restart to update to v${updateVersion}`, click: installUpdateNow }] : []),
     { label: 'Open MacroMind', click: showAppWindow },
     {
       label: 'Show overlay', type: 'checkbox', checked: settings.overlayEnabled,
@@ -210,6 +211,7 @@ function applySettings(next) {
 function updateStatus(payload) {
   const status = buildStatus(payload, { reachable: payload !== null, secondsSinceStart: (Date.now() - startedAt) / 1000 });
   currentStatus = status;
+  installUpdateWhenIdle();
   const json = JSON.stringify(status);
   if (json === lastStatusJson) return;
   lastStatusJson = json;
@@ -245,11 +247,30 @@ function registerIpc() {
 }
 
 let updateDownloaded = false;
+let updateVersion = null;
+let relaunchAfterUpdate = false;
+
+function installUpdateNow() {
+  relaunchAfterUpdate = true;
+  app.quit();
+}
+
+// A downloaded update installs by itself, but never mid-game: it waits until the status leaves 'in-game'.
+function installUpdateWhenIdle() {
+  if (updateDownloaded && !relaunchAfterUpdate && !(currentStatus && currentStatus.view.state === 'in-game')) installUpdateNow();
+}
+
+function onUpdateDownloaded(info) {
+  updateDownloaded = true;
+  updateVersion = info.version;
+  if (tray && !tray.isDestroyed()) tray.setContextMenu(buildTrayMenu());
+  installUpdateWhenIdle();
+}
 
 async function quit() {
   try { if (backend) await backend.stop(); } catch (error) { log(`backend stop failed: ${error && error.stack || error}`); }
   // app.exit() skips electron-updater's install-on-quit hook, so a downloaded update is installed explicitly.
-  if (updateDownloaded) require('electron-updater').autoUpdater.quitAndInstall(true, false);
+  if (updateDownloaded) require('electron-updater').autoUpdater.quitAndInstall(true, relaunchAfterUpdate);
   else app.exit(0);
 }
 
@@ -287,6 +308,6 @@ if (!app.requestSingleInstanceLock()) {
       });
     });
     startStatusLoop();
-    if (app.isPackaged) startAutoUpdate({ updater: require('electron-updater').autoUpdater, log, onDownloaded: () => { updateDownloaded = true; } }); // dev runs have no release to compare with
+    if (app.isPackaged) startAutoUpdate({ updater: require('electron-updater').autoUpdater, log, onDownloaded: onUpdateDownloaded }); // dev runs have no release to compare with
   }).catch((error) => log(`startup failed: ${error && error.stack || error}`));
 }
