@@ -11,7 +11,7 @@ const { trayIconBitmap } = require('./trayIcon');
 const { buildStatus } = require('./statusModel');
 const { startAutoUpdate } = require('./updater');
 const { PREVIEW_VIEW, PREVIEW_MS } = require('./previewView');
-const { HIDDEN_VIEW } = require('./viewModel');
+const { HIDDEN_VIEW, applyFeatureToggles } = require('./viewModel');
 
 const PORT = process.env.MACROMIND_PORT || '8765';
 const ADVICE_URL = process.env.MACROMIND_URL || `http://127.0.0.1:${PORT}/advice`;
@@ -123,11 +123,13 @@ function raiseOverlay() {
   overlay.moveTop();
 }
 
-function showOverlayView(view) {
+// lastView stays unfiltered, so switching a feature back on can show it again without waiting for the next poll.
+function showOverlayView(view, silent = false) {
   if (!overlay || overlay.isDestroyed()) return;
   lastView = view;
-  lastOverlayVisible = view.visible;
-  if (previewTimer === null) overlay.webContents.send(VIEW_MODEL_CHANNEL, view); // a preview keeps the screen until it ends
+  const shown = applyFeatureToggles(view, settings);
+  lastOverlayVisible = shown.visible;
+  if (previewTimer === null) overlay.webContents.send(VIEW_MODEL_CHANNEL, silent ? { ...shown, silent: true } : shown); // a preview keeps the screen until it ends
   syncOverlayVisibility();
 }
 
@@ -138,7 +140,7 @@ function previewOverlay() {
   overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...PREVIEW_VIEW, silent: true }); // silent: never pings
   previewTimer = setTimeout(() => {
     previewTimer = null;
-    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...lastView, silent: true });
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(VIEW_MODEL_CHANNEL, { ...applyFeatureToggles(lastView, settings), silent: true });
     syncOverlayVisibility();
   }, PREVIEW_MS);
   syncOverlayVisibility();
@@ -200,6 +202,7 @@ function applySettings(next) {
   settings = normalize(next);
   saveSettings(settingsFile, settings);
   applyOverlaySettings();
+  showOverlayView(lastView, true); // re-filter the current view now; silent: a toggle must never ping
   if (tray) tray.setContextMenu(buildTrayMenu());
   if (app.isPackaged && (process.platform === 'win32' || process.platform === 'darwin')) { // dev runs cannot register a login item
     app.setLoginItemSettings({ openAtLogin: settings.startWithWindows, args: [HIDDEN_FLAG] });

@@ -84,7 +84,8 @@ function renderStatus(status) {
 }
 
 // ---- settings: saved the moment a control changes, with plain confirmation ----
-const controls = { overlayEnabled: $('overlayEnabled'), corner: $('corner'), opacity: $('opacity'), startWithWindows: $('startWithWindows'), soundEnabled: $('soundEnabled') };
+const controls = { overlayEnabled: $('overlayEnabled'), corner: $('corner'), opacity: $('opacity'), startWithWindows: $('startWithWindows'), soundEnabled: $('soundEnabled'),
+  alertsEnabled: $('alertsEnabled'), timersEnabled: $('timersEnabled') };
 
 function readControls() {
   return {
@@ -93,6 +94,8 @@ function readControls() {
     opacity: Number(controls.opacity.value) / 100,
     startWithWindows: controls.startWithWindows.checked,
     soundEnabled: controls.soundEnabled.checked,
+    alertsEnabled: controls.alertsEnabled.checked,
+    timersEnabled: controls.timersEnabled.checked,
   };
 }
 
@@ -102,6 +105,8 @@ function showControls(settings) {
   controls.opacity.value = String(Math.round(settings.opacity * 100));
   controls.startWithWindows.checked = settings.startWithWindows;
   controls.soundEnabled.checked = settings.soundEnabled;
+  controls.alertsEnabled.checked = settings.alertsEnabled;
+  controls.timersEnabled.checked = settings.timersEnabled;
   $('opacity-value').textContent = `${controls.opacity.value}%`;
 }
 

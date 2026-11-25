@@ -122,6 +122,14 @@ function toRows(payload, maxRows) {
   return groupRows(rows).slice(0, maxRows).map((content) => ({ ...content, key: rowKey(content) }));
 }
 
+/** The view without the alerts and/or timers the user switched off; hidden when nothing is left to draw. */
+function applyFeatureToggles(view, { alertsEnabled = true, timersEnabled = true } = {}) {
+  if (!view.visible || (alertsEnabled && timersEnabled)) return view;
+  const alerts = alertsEnabled ? view.alerts : [];
+  const timers = timersEnabled ? view.timers : [];
+  return view.rows.length + alerts.length + timers.length === 0 ? HIDDEN_VIEW : { ...view, alerts, timers };
+}
+
 /**
  * A stable string for a whole view; equal keys mean nothing visible changed.
  * @param {ViewModel} viewModel
@@ -134,4 +142,4 @@ function viewKey(viewModel) {
   return parts.join('\n');
 }
 
-module.exports = { toViewModel, toRows, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };
+module.exports = { applyFeatureToggles, toViewModel, toRows, viewKey, rowKey, MAX_ROWS, MAX_ALTERNATIVES, HIDDEN_VIEW };

@@ -19,7 +19,7 @@ test('a corrupt file gives the defaults instead of crashing the app', () => {
 
 test('settings survive a save and a load', () => {
   const file = tempFile();
-  const chosen = { overlayEnabled: false, corner: 'bottom-left', opacity: 0.6, startWithWindows: true, soundEnabled: false };
+  const chosen = { overlayEnabled: false, corner: 'bottom-left', opacity: 0.6, startWithWindows: true, soundEnabled: false, alertsEnabled: false, timersEnabled: false };
   saveSettings(file, chosen);
   assert.deepEqual(loadSettings(file), chosen);
 });
@@ -56,6 +56,9 @@ test('booleans must really be booleans', () => {
   assert.equal(normalize({ startWithWindows: 1 }).startWithWindows, DEFAULTS.startWithWindows);
   assert.equal(normalize({ soundEnabled: 'no' }).soundEnabled, true);
   assert.equal(normalize({ soundEnabled: false }).soundEnabled, false);
+  assert.equal(normalize({ alertsEnabled: 'no' }).alertsEnabled, true);
+  assert.equal(normalize({ timersEnabled: 0 }).timersEnabled, true);
+  assert.equal(normalize({ alertsEnabled: false, timersEnabled: false }).timersEnabled, false);
   assert.equal(normalize({ overlayEnabled: false }).overlayEnabled, false);
 });
 
